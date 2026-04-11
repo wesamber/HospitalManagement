@@ -1,4 +1,4 @@
-﻿namespace HospitalManagement.Models.Contracts;
+﻿namespace HospitalManagement.Domain.Contracts;
 
 public interface IPermanentSalary
 {
