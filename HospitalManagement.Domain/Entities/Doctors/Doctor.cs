@@ -1,18 +1,17 @@
 ﻿
-using HospitalManagement.Domain.Entities.Departments;
+using HospitalManagement.Domain.Contracts;
 using HospitalManagement.Domain.Entities.Enums;
-using System.Text.Json.Serialization;
 
 namespace HospitalManagement.Domain.Entities.Doctors;
 
-public class Doctor
+public class Doctor : IEntity
 {
-    public Guid DoctorId { get; private set; }
+    public Guid Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string DoctorNumber { get; private set; } = string.Empty;
-    public string? Address { get; private set; }
+    public enSpecialization Specialization { get; private set; }
     public DateOnly DateOfBirth { get; private set; }
-    public Specialization Specialization { get; private set; }
+    public string? Address { get; private set; }
     public string? PhoneNumber { get; private set; }
     public string? Email { get; private set; }
 
@@ -29,14 +28,38 @@ public class Doctor
     
     protected Doctor() { }
 
-    public Doctor(Guid id, string name, string doctorNumber, Specialization specialization, DateOnly dob)
+    // constructor for loading 
+    public Doctor(
+        Guid id, string name, string doctorNumber,
+        enSpecialization specialization, DateOnly dob , 
+        string? address , string? phoneNumber , string? email)
     {
-        DoctorId = id;
+        Id = id;
         Name = name;
         DoctorNumber = doctorNumber;
         Specialization = specialization;
         DateOfBirth = dob;
+        Address = address;
+        PhoneNumber = phoneNumber;
+        Email = email;
     }
+
+    // constructor for creating new doctor
+    public Doctor(
+        string name, string doctorNumber,
+        enSpecialization specialization, DateOnly dob , 
+        string? address , string? phoneNumber , string? email)
+        :this(Guid.NewGuid() , name, doctorNumber, specialization, dob, address, phoneNumber, email)
+    {
+        Name = name;
+        DoctorNumber = doctorNumber;
+        Specialization = specialization;
+        DateOfBirth = dob;
+        Address = address;
+        PhoneNumber = phoneNumber;
+        Email = email;
+    }
+
     public void AddRole(DoctorRole role)
     {
         ActiveRole?.Deactivate(DateTime.Now);
@@ -54,7 +77,7 @@ public class Doctor
     public void PromoteToPermanent(decimal baseSalary)
     {
         ActiveRole?.Deactivate(DateTime.Now);
-        _roles.Add(new PermanentRole(Guid.NewGuid(), DateTime.Now, baseSalary));
+        _roles.Add(new PermanentRole(DateTime.Now, null, baseSalary));
     }
 
     public void AddTreatment(DoctorTreatment treatment)

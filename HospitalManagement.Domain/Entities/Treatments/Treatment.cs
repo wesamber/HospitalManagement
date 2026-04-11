@@ -1,8 +1,10 @@
-﻿namespace HospitalManagement.Domain.Entities.Treatments;
+﻿using HospitalManagement.Domain.Contracts;
 
-public abstract class Treatment
+namespace HospitalManagement.Domain.Entities.Treatments;
+
+public abstract class Treatment : IEntity
 {
-    public Guid TreatmentId { get; private set; }
+    public Guid Id { get; private set; }
     public DateTime Date { get;protected set; }
     public decimal Cost { get;protected set; }
 
@@ -11,7 +13,7 @@ public abstract class Treatment
     // constructor for loading
     protected Treatment(Guid id , DateTime date,  decimal cost)
     {
-        TreatmentId = id;
+        Id = id;
         Date = date;
         Cost = cost;
     }

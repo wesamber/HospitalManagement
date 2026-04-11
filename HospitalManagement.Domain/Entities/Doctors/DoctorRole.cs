@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using HospitalManagement.Domain.Contracts;
 
 namespace HospitalManagement.Domain.Entities.Doctors;
 
-public abstract class DoctorRole
+public abstract class DoctorRole : IEntity
 {
-    public Guid RoleId { get; private set; }
+    public Guid Id { get; private set; }
     public abstract string RoleName { get; }
     public DateTime StartDate { get; private set; }
     public DateTime? EndDate { get; private set; }
@@ -21,16 +17,15 @@ public abstract class DoctorRole
     protected DoctorRole() { }
 
     // For creating new role 
-    protected DoctorRole( Guid id , DateTime startDate)
+    protected DoctorRole(DateTime startDate) 
+        : this(Guid.NewGuid(), startDate , null , true)
     {
-        RoleId = id;
-        StartDate = startDate;
         IsActive = true;
     }
     // وقت تحميل البيانات
-    protected DoctorRole(Guid id, DateTime startDate, DateTime? endDate , bool isActive)
+    protected DoctorRole(Guid id, DateTime startDate, DateTime? endDate, bool isActive)
     {
-        RoleId = id;
+        Id = id;
         StartDate = startDate;
         EndDate = endDate;
         IsActive = isActive;
@@ -40,8 +35,8 @@ public abstract class DoctorRole
         if(IsActive == false)
             throw new InvalidOperationException($"Role '{RoleName}' is already inactive.");
 
-        if(EndDate > endDate)
-            throw new ArgumentException($"Role '{RoleName}' cannot be deactivated before its end date.");
+        if(endDate < StartDate)
+            throw new ArgumentException($"End date cannot be before start date.");
 
         IsActive = false;
         EndDate = endDate;
@@ -54,4 +49,3 @@ public abstract class DoctorRole
     public abstract decimal CalculateSalary(decimal referenceAmount);
 }
 
-public record SalaryRecord(DateTime Date, decimal Amount);

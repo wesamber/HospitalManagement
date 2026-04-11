@@ -1,15 +1,24 @@
+using HospitalManagement.Domain.Contracts;
 
 namespace HospitalManagement.Domain.Entities.Doctors;
 
-public class PermanentRole : DoctorRole
+public class PermanentRole : DoctorRole , IEntity
 {
     public override string RoleName => "Permanent";
     public decimal BaseSalary { get;private set; }
 
-    protected PermanentRole() { }
+    private PermanentRole() { }
 
-    public PermanentRole(Guid id, DateTime startDate, decimal baseSalary)
-        : base(id, startDate)
+    // constructor for creating
+    public PermanentRole(DateTime startDate ,DateTime? endDate ,decimal baseSalary)
+        : base(Guid.NewGuid(), startDate , endDate , true)
+    {
+        BaseSalary = baseSalary;
+    }
+
+    // constructor for loading
+    public PermanentRole(Guid id, DateTime startDate,DateTime? endDate , decimal baseSalary)
+        : base(id, startDate , endDate , true)
     {
         BaseSalary = baseSalary;
     }

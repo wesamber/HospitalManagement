@@ -1,4 +1,4 @@
-﻿namespace HospitalManagement.Domain.Entities.Config;
+﻿namespace HospitalManagement.Application.Entities.Config;
 
 public class SalaryConfig
 {

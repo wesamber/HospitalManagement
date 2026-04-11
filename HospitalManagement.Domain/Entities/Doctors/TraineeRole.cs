@@ -1,17 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using HospitalManagement.Domain.Contracts;
 
 namespace HospitalManagement.Domain.Entities.Doctors;
 
-public class TraineeRole : DoctorRole
+public class TraineeRole : DoctorRole , IEntity
 {
     public override string RoleName => "Trainee";
 
-    public TraineeRole(Guid id, DateTime startDate)
-        : base(id, startDate)   { }
+    private TraineeRole() { }
+
+    // constructor for creating
+    public TraineeRole(DateTime startDate , DateTime? endDate , bool isActive = true)
+        : base(Guid.NewGuid(), startDate, endDate, isActive) { }
+
+
+    // constructor for loading
+    public TraineeRole(Guid id, DateTime startDate, DateTime? endDate, bool isActive)
+        : base(id, startDate , endDate , isActive)   { }
 
     public int GetYearLevel()
     {

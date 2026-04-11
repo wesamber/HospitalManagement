@@ -1,14 +1,8 @@
-﻿using HospitalManagement.Domain.Entities.Treatments;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using HospitalManagement.Domain.Contracts;
 
 namespace HospitalManagement.Domain.Entities.Patients;
 
-public class ExternalPatient : Patient
+public class ExternalPatient : Patient  , IEntity
 {
     public bool IsAdmitted { get;private set; } = false;
     public DateTime? AdmissionDate { get; private set; }
@@ -35,7 +29,7 @@ public class ExternalPatient : Patient
     }
 
 
-    public void Admit(Guid departmentId)
+    public void Admit()
     {
         if(IsAdmitted) 
             throw new InvalidOperationException("Patient is already admitted.");

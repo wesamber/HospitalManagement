@@ -1,11 +1,11 @@
-﻿using HospitalManagement.Domain.Entities.Treatments;
-using System.Text.Json.Serialization;
+﻿using HospitalManagement.Domain.Contracts;
+using HospitalManagement.Domain.Entities.Treatments;
 
 namespace HospitalManagement.Domain.Entities.Patients;
 
-public abstract class Patient
+public abstract class Patient : IEntity
 {
-    public Guid PatientId { get; private set; }
+    public Guid Id { get; private set; }
     public string PatientNumber {  get; protected set; } = string.Empty;
     public string Name { get; protected set; } = string.Empty;
     public DateOnly? DateOfBirth { get;protected set; }
@@ -18,7 +18,7 @@ public abstract class Patient
 
     // constructor for loading existing patients
     protected Patient() { }
-    protected Patient(Guid patientId,
+    protected Patient(Guid id,
         string patientNumber,
         string name,
         DateOnly? dateOfBirth,
@@ -27,7 +27,7 @@ public abstract class Patient
         string? email,
         IEnumerable<Guid>? treatmentIds=null)
     {
-        PatientId = patientId;
+        Id = id;
         PatientNumber = patientNumber;
         Name = name;
         DateOfBirth = dateOfBirth;
@@ -57,7 +57,7 @@ public abstract class Patient
 
     public void AddExternalTreatment(TreatmentExternal treatment)
     {
-        if (treatment != null && !_externalTreatmentIds.Contains(treatment.TreatmentId))
-            _externalTreatmentIds.Add(treatment.TreatmentId);
+        if (treatment != null && !_externalTreatmentIds.Contains(treatment.Id))
+            _externalTreatmentIds.Add(treatment.Id);
     }
 }
