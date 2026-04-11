@@ -4,19 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HospitalManagement.Models;
+namespace HospitalManagement.Domain.Entities.Doctors;
 
 public class TraineeRole : DoctorRole
 {
-    private readonly decimal _permanentBaseSalary;
+    public override string RoleName => "Trainee";
 
-    public TraineeRole() { }
-
-    public TraineeRole(DateTime startDate, decimal permanentBaseSalary)
-        : base(startDate)
-    {
-        _permanentBaseSalary = permanentBaseSalary;
-    }
+    public TraineeRole(Guid id, DateTime startDate)
+        : base(id, startDate)   { }
 
     public int GetYearLevel()
     {
@@ -24,18 +19,19 @@ public class TraineeRole : DoctorRole
         return Math.Min(years, 2);
     }
 
-    public bool IsEligibleForPromotion()
+    // هل صار وقت الترقية؟
+    public bool IsEligibleForPromotion() 
     {
         return (DateTime.Now - StartDate).TotalDays >= 365 * 2;
     }
 
-    public override decimal CalculateSalary()
+    public override decimal CalculateSalary(decimal systemBaseSalary)
     {
         int year = GetYearLevel();
 
         if (year == 1)
-            return _permanentBaseSalary * 0.50m;
+            return systemBaseSalary * 0.50m;
 
-        return _permanentBaseSalary * 0.75m;
+        return systemBaseSalary * 0.75m;
     }
 }
