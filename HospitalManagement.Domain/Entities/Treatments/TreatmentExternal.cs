@@ -10,8 +10,7 @@ public class TreatmentExternal : Treatment
 
     // constructor for loading
     public TreatmentExternal(
-        Guid id, DateTime date,
-        string notes, decimal cost,
+        Guid id, DateTime date, decimal cost,
         string clinicNumber, Guid doctorId,
         Guid patientId)
         : base(id, date, cost)

@@ -2,7 +2,7 @@
 
 namespace HospitalManagement.Domain.Entities.Doctors;
 
-public class TraineeRole : DoctorRole , IEntity
+public class TraineeRole : DoctorRole 
 {
     public override string RoleName => "Trainee";
 

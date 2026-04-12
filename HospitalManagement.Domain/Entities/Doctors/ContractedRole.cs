@@ -2,7 +2,7 @@
 
 namespace HospitalManagement.Domain.Entities.Doctors;
 
-public class ContractedRole : DoctorRole , IEntity
+public class ContractedRole : DoctorRole 
 {
     public override string RoleName => "Contracted";
     public decimal Percent { get; private set; } = 0.5m; // 50%
@@ -21,7 +21,7 @@ public class ContractedRole : DoctorRole , IEntity
 
     // constructor for creating new contracted role
     public ContractedRole(DateTime startDate , DateTime? endDate , decimal percent)
-        : base( Guid.NewGuid(), startDate , null , true)
+        : base( startDate )
     {
         Percent = percent;
     }

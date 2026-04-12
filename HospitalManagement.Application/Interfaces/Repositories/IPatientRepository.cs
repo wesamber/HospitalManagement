@@ -1,8 +1,8 @@
 ﻿using HospitalManagement.Domain.Entities.Patients;
 
-namespace HospitalManagement.Domain.Interfaces;
+namespace HospitalManagement.Application.Interfaces.Repositories;
 
 public interface IPatientRepository : IRepository<Patient>
 {
-    Patient GetByNumber(int patientNumber);
+    Patient? GetByNumber(int patientNumber);
 }

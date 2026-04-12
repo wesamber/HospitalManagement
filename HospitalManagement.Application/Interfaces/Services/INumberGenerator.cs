@@ -1,4 +1,4 @@
-﻿namespace HospitalManagement.Domain.Interfaces;
+﻿namespace HospitalManagement.Application.Interfaces.Services;
 
 public interface INumberGenerator
 {

@@ -9,7 +9,7 @@ public class Doctor : IEntity
     public Guid Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string DoctorNumber { get; private set; } = string.Empty;
-    public enSpecialization Specialization { get; private set; }
+    public Specialization Specialization { get; private set; }
     public DateOnly DateOfBirth { get; private set; }
     public string? Address { get; private set; }
     public string? PhoneNumber { get; private set; }
@@ -31,7 +31,7 @@ public class Doctor : IEntity
     // constructor for loading 
     public Doctor(
         Guid id, string name, string doctorNumber,
-        enSpecialization specialization, DateOnly dob , 
+        Specialization specialization, DateOnly dob , 
         string? address , string? phoneNumber , string? email)
     {
         Id = id;
@@ -47,7 +47,7 @@ public class Doctor : IEntity
     // constructor for creating new doctor
     public Doctor(
         string name, string doctorNumber,
-        enSpecialization specialization, DateOnly dob , 
+        Specialization specialization, DateOnly dob , 
         string? address , string? phoneNumber , string? email)
         :this(Guid.NewGuid() , name, doctorNumber, specialization, dob, address, phoneNumber, email)
     {
