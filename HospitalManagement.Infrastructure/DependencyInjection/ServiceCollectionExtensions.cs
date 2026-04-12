@@ -14,35 +14,28 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
         services.AddSingleton<IFileStorage, FileStorage>();
-
-        // Serializer + Polymorphism
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            TypeInfoResolver = new JsonTypeInfoResolver()
-        };
         services.AddSingleton<ISerializer>(new Serializer());
 
-        services.AddScoped<IDoctorRepository>(sp =>
+        services.AddSingleton<IDoctorRepository>(sp =>
             new JsonDoctorRepository(
-                "Data/doctors.snapshot.json",
-                "Data/doctors.log.jsonl",
+                Path.Combine(AppContext.BaseDirectory, "Data", "doctors.snapshot.json"),
+                Path.Combine(AppContext.BaseDirectory, "Data", "doctors.log.jsonl"),
                 sp.GetRequiredService<IFileStorage>(),
                 sp.GetRequiredService<ISerializer>()
             ));
 
-        services.AddScoped<IPatientRepository>(sp =>
+        services.AddSingleton<IPatientRepository>(sp =>
             new JsonPatientRepository(
-                "Data/patients.snapshot.json",
-                "Data/patients.log.jsonl",
+                Path.Combine(AppContext.BaseDirectory, "Data", "doctors.snapshot.json"),
+                Path.Combine(AppContext.BaseDirectory, "Data", "doctors.log.jsonl"),
                 sp.GetRequiredService<IFileStorage>(),
                 sp.GetRequiredService<ISerializer>()
             ));
 
-        services.AddScoped<ITreatmentRepository>(sp =>
+        services.AddSingleton<ITreatmentRepository>(sp =>
             new JsonTreatmentRepository(
-                "Data/treatments.snapshot.json",
-                "Data/treatments.log.jsonl",
+                Path.Combine(AppContext.BaseDirectory, "Data", "treatments.snapshot.json"),
+                Path.Combine(AppContext.BaseDirectory, "Data", "treatments.log.jsonl"),
                 sp.GetRequiredService<IFileStorage>(),
                 sp.GetRequiredService<ISerializer>()
             ));

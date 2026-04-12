@@ -58,56 +58,80 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
 
     public async Task AddAsync(T entity)
     {
-        var state = await GetAllAsync();
-
-        if(state.Any(e => e.Id == entity.Id))
-            throw new InvalidOperationException($"Entity with the same ID: {entity.Id} already exists.");
-
-        state.Add(entity);
-
-        var logEntry = new LogEntry<T>
+        await _lock.WaitAsync();
+        try
         {
-            Op = "add",
-            Entity = entity
-        };
+            var state = await GetAllAsync();
 
-        await MarkChangeAsync(logEntry);
+            if (state.Any(e => e.Id == entity.Id))
+                throw new InvalidOperationException($"Entity with the same ID: {entity.Id} already exists.");
+
+            state.Add(entity);
+
+            var logEntry = new LogEntry<T>
+            {
+                Op = "add",
+                Entity = entity
+            };
+
+            await MarkChangeAsync(logEntry);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     public async Task UpdateAsync(T entity)
     {
-        var state = await GetAllAsync();
+        await _lock.WaitAsync();
+        try
+        { 
+            var state = await GetAllAsync();
 
-        var index = state.FindIndex(e => e.Id == entity.Id);
-        if(index == -1)
-            throw new KeyNotFoundException($"Entity with ID: {entity.Id} not found.");
+            var index = state.FindIndex(e => e.Id == entity.Id);
+            if(index == -1)
+                throw new KeyNotFoundException($"Entity with ID: {entity.Id} not found.");
 
-        state[index] = entity;
+            state[index] = entity;
 
-        LogEntry<T> logEntry = new LogEntry<T>
+            LogEntry<T> logEntry = new LogEntry<T>
+            {
+                Op = "update",
+                Entity = entity
+            };
+            await MarkChangeAsync(logEntry);
+        }
+        finally
         {
-            Op = "update",
-            Entity = entity
-        };
-        await MarkChangeAsync(logEntry);
+            _lock.Release();
+        }
     }
 
     public async Task DeleteAsync(T entity)
     {
-        var state = await GetAllAsync();
-
-        var existing = state.FirstOrDefault(e => e.Id == entity.Id);
-        if(existing is null)
-            throw new KeyNotFoundException($"Entity with ID: {entity.Id} not found.");
-
-        state.Remove(existing);
-
-        var logEntry = new LogEntry<T>
+        await _lock.WaitAsync();
+        try
         {
-            Op = "delete",
-            Id = entity.Id
-        };
-        await MarkChangeAsync(logEntry);
+            var state = await GetAllAsync();
+
+            var existing = state.FirstOrDefault(e => e.Id == entity.Id);
+            if(existing is null)
+                throw new KeyNotFoundException($"Entity with ID: {entity.Id} not found.");
+
+            state.Remove(existing);
+
+            var logEntry = new LogEntry<T>
+            {
+                Op = "delete",
+                Id = entity.Id
+            };
+            await MarkChangeAsync(logEntry);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     public async Task<T?> GetByIdAsync(Guid id)
@@ -195,7 +219,7 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
 
     private async Task AppendLogAsync(LogEntry<T> entry)
     {
-        var json = _serializer.Serialize(entry);
+        var json = _serializer.Serialize(entry , indented: false);
         await _fileStorage.AppendLineAsync(_logPath, json);
     }
 
@@ -207,11 +231,11 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
         await _lock.WaitAsync();
         try
         {
-            var snapshotJson = _serializer.Serialize(_cache);
+            var snapshotJson = _serializer.Serialize(_cache , indented: true);
             await _fileStorage.WriteAsync(_snapshotPath, snapshotJson);
 
             // بعد ما اعمل snapshot بفرغ اللوق
-            await _fileStorage.WriteAsync(_logPath, string.Empty);
+            await _fileStorage.WriteAsync(_logPath, "");
 
             _pendingOperations = 0; // رجع العداد للصفر
         }
