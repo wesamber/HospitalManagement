@@ -1,6 +1,6 @@
 ﻿using HospitalManagement.Domain.Entities.Treatments;
 
-namespace HospitalManagement.Domain.Interfaces;
+namespace HospitalManagement.Application.Interfaces.Repositories;
 
 public interface ITreatmentRepository : IRepository<Treatment>
 {

@@ -1,6 +1,6 @@
 namespace HospitalManagement.Domain.Entities.Enums;
 
-public enum enTreatmentRole
+public enum TreatmentRole
 {
     Primary ,
     Secondary ,

@@ -1,6 +1,6 @@
 namespace HospitalManagement.Domain.Entities.Enums;
 
-public enum enSpecialization
+public enum Specialization
 {
     Cardiology ,
     Neurology ,

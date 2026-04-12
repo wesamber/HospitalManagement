@@ -2,7 +2,7 @@ using HospitalManagement.Domain.Contracts;
 
 namespace HospitalManagement.Domain.Entities.Doctors;
 
-public class PermanentRole : DoctorRole , IEntity
+public class PermanentRole : DoctorRole 
 {
     public override string RoleName => "Permanent";
     public decimal BaseSalary { get;private set; }
