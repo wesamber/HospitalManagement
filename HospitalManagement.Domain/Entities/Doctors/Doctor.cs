@@ -60,6 +60,16 @@ public class Doctor : IEntity
         Email = email;
     }
 
+    public void UpdateInfo(string name, Specialization specialization, DateOnly dob, string? address, string? phoneNumber, string? email)
+    {
+        Name = name;
+        Specialization = specialization;
+        DateOfBirth = dob;
+        Address = address;
+        PhoneNumber = phoneNumber;
+        Email = email;
+    }
+
     public void AddRole(DoctorRole role)
     {
         ActiveRole?.Deactivate(DateTime.Now);

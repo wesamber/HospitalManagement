@@ -1,8 +1,12 @@
 ﻿using HospitalManagement.Application.Interfaces.Repositories;
 using HospitalManagement.Application.Interfaces.Services;
+using HospitalManagement.Application.Services;
+using HospitalManagement.Infrastructure.Configuration;
 using HospitalManagement.Infrastructure.Persistence.Json;
 using HospitalManagement.Infrastructure.Serialization;
+using HospitalManagement.Infrastructure.Services;
 using HospitalManagement.Infrastructure.Storage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
@@ -11,41 +15,58 @@ namespace HospitalManagement.Infrastructure.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
+        // read setting from appsettings.json
+        var storageOption = new FileStorageOption();
+        configuration.GetSection(FileStorageOption.SectionName).Bind(storageOption);
+
+        // register primary services
         services.AddSingleton<IFileStorage, FileStorage>();
-
-        // Serializer + Polymorphism
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            TypeInfoResolver = new JsonTypeInfoResolver()
-        };
         services.AddSingleton<ISerializer>(new Serializer());
+        services.AddScoped<INumberGenerator, NumberGenerator>();
 
-        services.AddScoped<IDoctorRepository>(sp =>
+        if(storageOption.ActiveProvider == "Json")
+        {
+            services.AddScoped<IDoctorRepository>(sp =>
             new JsonDoctorRepository(
-                "Data/doctors.snapshot.json",
-                "Data/doctors.log.jsonl",
+                Path.Combine(AppContext.BaseDirectory, storageOption.JsonPaths.DoctorsSnapshot),
+                Path.Combine(AppContext.BaseDirectory, storageOption.JsonPaths.DoctorsLog),
                 sp.GetRequiredService<IFileStorage>(),
                 sp.GetRequiredService<ISerializer>()
             ));
 
-        services.AddScoped<IPatientRepository>(sp =>
-            new JsonPatientRepository(
-                "Data/patients.snapshot.json",
-                "Data/patients.log.jsonl",
-                sp.GetRequiredService<IFileStorage>(),
-                sp.GetRequiredService<ISerializer>()
-            ));
+            services.AddScoped<IPatientRepository>(sp =>
+                new JsonPatientRepository(
+                    Path.Combine(AppContext.BaseDirectory, storageOption.JsonPaths.PatientsSnapshot),
+                    Path.Combine(AppContext.BaseDirectory, storageOption.JsonPaths.PatientsLog),
+                    sp.GetRequiredService<IFileStorage>(),
+                    sp.GetRequiredService<ISerializer>()
+                ));
 
-        services.AddScoped<ITreatmentRepository>(sp =>
-            new JsonTreatmentRepository(
-                "Data/treatments.snapshot.json",
-                "Data/treatments.log.jsonl",
-                sp.GetRequiredService<IFileStorage>(),
-                sp.GetRequiredService<ISerializer>()
-            ));
+            services.AddScoped<ITreatmentRepository>(sp =>
+                new JsonTreatmentRepository(
+                    Path.Combine(AppContext.BaseDirectory, storageOption.JsonPaths.TreatmentsSnapshot),
+                    Path.Combine(AppContext.BaseDirectory, storageOption.JsonPaths.TreatmentsLog),
+                    sp.GetRequiredService<IFileStorage>(),
+                    sp.GetRequiredService<ISerializer>()
+                ));
+        }
+        else if(storageOption.ActiveProvider == "Database")
+        {
+            // هون الحقن الريبو تبعات الداتا بيز
+            // 4. هنا نضع ريبو الأدو (ADO.NET)
+            //// سنمرر الـ ConnectionString من ملف الإعدادات
+            //var connectionString = storageOptions.ConnectionStrings.DefaultConnection;
+
+            //services.AddScoped<IDoctorRepository>(sp => new SqlDoctorRepository(connectionString));
+            //services.AddScoped<IPatientRepository>(sp => new SqlPatientRepository(connectionString));
+            //services.AddScoped<ITreatmentRepository>(sp => new SqlTreatmentRepository(connectionString));
+        }
+
+        // هون كمان بدي ضيف الانترفيسات تبع الريبو تبع  الادو
         return services;
     }
 }

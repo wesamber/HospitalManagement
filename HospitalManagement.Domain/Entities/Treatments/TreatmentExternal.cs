@@ -3,32 +3,32 @@
 public class TreatmentExternal : Treatment
 {
     public string ClinicNumber { get;private set; } = string.Empty;
-    public Guid DoctorId { get;private set; }
+    public string DoctorName { get;private set; } = string.Empty;
     public Guid PatientId { get;private set; }
 
     private TreatmentExternal() { }
 
     // constructor for loading
     public TreatmentExternal(
-        Guid id, DateTime date, decimal cost,
-        string clinicNumber, Guid doctorId,
+        Guid id, string numberTreatment, DateTime startDate, decimal cost,
+        string clinicNumber, string doctorName,
         Guid patientId)
-        : base(id, date, cost)
+        : base(id, numberTreatment, startDate, cost)
     {
         ClinicNumber = clinicNumber;
-        DoctorId = doctorId;
+        DoctorName = doctorName;
         PatientId = patientId;
     }
 
     //constructor for creating
     public TreatmentExternal(
-        DateTime date, decimal cost,
-        string clinicNumber, Guid doctorId ,
+        string numberTreatment, DateTime startDate, decimal cost,
+        string clinicNumber, string doctorName,
         Guid patientId)
-        : base(date, cost)
+        : base(numberTreatment, startDate, cost)
     {
         ClinicNumber = clinicNumber;
-        DoctorId = doctorId;
+        DoctorName = doctorName;
         PatientId = patientId;
     }
 }
