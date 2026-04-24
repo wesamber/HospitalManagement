@@ -18,27 +18,36 @@ public class JsonDoctorRepository : JsonSnapshotLogRepository<Doctor> , IDoctorR
         IFileStorage fileStorage,
         ISerializer serializer)
         : base(snapshotPath, logPath, fileStorage, serializer)
+    {   }
+
+    public async Task<bool> ExistAsync(string name, DateOnly dob)
     {
+        var state = await GetAllAsync();
+        return state.Any(d => d.Name == name && d.DateOfBirth == dob);
     }
 
-    public IReadOnlyList<Doctor> GetByDepartment(Guid departmentId)
+    public async Task<IReadOnlyList<Doctor>> GetByDepartmentAsync(Guid departmentId)
     {
-        var state = _cache ?? 
-            throw new InvalidOperationException("Repository is not initialized.");
-        return state.Where(d => d.DepartmentsIds.Contains(departmentId)).ToList();   
+        var state = await GetAllAsync();
+        return state
+            .Where(d => d.DepartmentsIds.Contains(departmentId))
+            .ToList();   
     }
 
-
-    public Doctor? GetByNumber(string doctorNumber)
+    public async Task<Doctor?> GetByNumberAsync(string doctorNumber)
     {
-        var state = _cache ?? throw new InvalidOperationException("Repository not initialized.");
+        var state = await GetAllAsync();
         return state.FirstOrDefault(d => d.DoctorNumber == doctorNumber);
     }
 
 
-    public IReadOnlyList<Doctor> GetBySpecialization(Specialization specialization)
+    public async Task<IReadOnlyList<Doctor>> GetBySpecializationAsync(Specialization specialization)
     {
-        var state = _cache ?? throw new InvalidOperationException("Repository not initialized.");
-        return state.Where(d => d.Specialization == specialization).ToList();
+        var state = await GetAllAsync();
+        return state
+            .Where(d => d.Specialization == specialization)
+            .ToList();
     }
+
+     
 }

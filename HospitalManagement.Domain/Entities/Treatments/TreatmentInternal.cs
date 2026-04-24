@@ -1,11 +1,12 @@
 ﻿using HospitalManagement.Domain.Contracts;
 using HospitalManagement.Domain.Entities.Doctors;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace HospitalManagement.Domain.Entities.Treatments;
 
 public class TreatmentInternal : Treatment , IEntity
 {
-    public DateTime DateDischarge { get;private set; }
+    public DateTime? DateDischarge { get;private set; }
     public Guid DepartmentId { get;private set; }
     public Guid PatientId { get;private set; } 
 
@@ -15,9 +16,9 @@ public class TreatmentInternal : Treatment , IEntity
 
     // for loading
     public TreatmentInternal(
-        Guid id , DateTime datestart , decimal cost,
+        Guid id, string numberTreatment, DateTime datestart, decimal cost,
         DateTime dateDicharge , Guid departmentId, Guid patientId)
-        : base(id, datestart, cost)
+        : base(id, numberTreatment, datestart, cost)
     {
         DateDischarge = dateDicharge;
         DepartmentId = departmentId;
@@ -26,9 +27,9 @@ public class TreatmentInternal : Treatment , IEntity
 
     // for creating
     public TreatmentInternal(
-        DateTime datestart, decimal cost,
+        string numberTreatment, DateTime datestart, decimal cost,
         DateTime dateDicharge, Guid departmentId, Guid patientId)
-        : base(datestart, cost)
+        : base(numberTreatment, datestart, cost)
     {
         DateDischarge = dateDicharge;
         DepartmentId = departmentId;
@@ -47,5 +48,16 @@ public class TreatmentInternal : Treatment , IEntity
             throw new InvalidOperationException("DoctorTreatment's TreatmentId does not match this Treatment's Id.");
 
         _doctors.Add(doctorTreatment);
+    }
+
+    public void Discharge(DateTime dischargeDate)
+    {
+        if (DateDischarge != null)
+            throw new InvalidOperationException("Already discharged.");
+
+        if (dischargeDate < StartDate   )
+            throw new InvalidOperationException("Discharge date cannot be before start date.");
+
+        DateDischarge = dischargeDate;
     }
 }

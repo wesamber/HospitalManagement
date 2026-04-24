@@ -58,10 +58,10 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
 
     public async Task AddAsync(T entity)
     {
+        var state = await GetAllAsync();
         await _lock.WaitAsync();
         try
         {
-            var state = await GetAllAsync();
 
             if (state.Any(e => e.Id == entity.Id))
                 throw new InvalidOperationException($"Entity with the same ID: {entity.Id} already exists.");
@@ -84,10 +84,10 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
 
     public async Task UpdateAsync(T entity)
     {
+        var state = await GetAllAsync();
         await _lock.WaitAsync();
         try
         { 
-            var state = await GetAllAsync();
 
             var index = state.FindIndex(e => e.Id == entity.Id);
             if(index == -1)
@@ -110,10 +110,11 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
 
     public async Task DeleteAsync(T entity)
     {
+        // لانو ال getallasync فيها lock كمان 
+        var state = await GetAllAsync();
         await _lock.WaitAsync();
         try
         {
-            var state = await GetAllAsync();
 
             var existing = state.FirstOrDefault(e => e.Id == entity.Id);
             if(existing is null)

@@ -10,4 +10,18 @@
     <ProjectReference Include="..\HospitalManagement.Domain\HospitalManagement.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Mappers\Patients\" />
+    <Folder Include="Mappers\Treatments\" />
+    <Folder Include="Validators\Patients\" />
+    <Folder Include="Validators\Treatments\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="12.0.1" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+  </ItemGroup>
+
 </Project>

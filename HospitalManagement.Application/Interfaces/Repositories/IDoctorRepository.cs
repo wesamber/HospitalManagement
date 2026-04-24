@@ -5,7 +5,8 @@ namespace HospitalManagement.Application.Interfaces.Repositories;
 
 public interface IDoctorRepository : IRepository<Doctor>
 {
-    Doctor? GetByNumber(string doctorNumber);
-    IReadOnlyList<Doctor> GetBySpecialization(Specialization specialization);
-    IReadOnlyList<Doctor> GetByDepartment(Guid departmentId);
+    Task<Doctor?> GetByNumberAsync(string doctorNumber);
+    Task<IReadOnlyList<Doctor>> GetBySpecializationAsync(Specialization specialization);
+    Task<IReadOnlyList<Doctor>> GetByDepartmentAsync(Guid departmentId);
+    Task<bool> ExistAsync(string name, DateOnly dob);
 }

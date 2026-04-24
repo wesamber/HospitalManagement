@@ -24,6 +24,6 @@ public class JsonTreatmentRepository : JsonSnapshotLogRepository<Treatment>, ITr
     {
         var state = _cache ?? 
             throw new InvalidOperationException("Repository is not initialized.");
-        return state.Where(t => t.Date >= dateStart && t.Date <= dateEnd).ToList();
+        return state.Where(t => t.StartDate >= dateStart && t.StartDate <= dateEnd).ToList();
     }
 }
