@@ -11,8 +11,10 @@ using System.Threading.Tasks;
 
 namespace HospitalManagement.Infrastructure.Persistence.Json;
 
-public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
+public class JsonSnapshotLogRepository<T , TJsonModel> : IRepository<T> where T : IEntity
 {
+    private readonly Func<T, TJsonModel> _toModel;
+    private readonly Func<TJsonModel, T> _toDomain;
     private readonly string _snapshotPath;
     private readonly string _logPath;
     private readonly IFileStorage _fileStorage;
@@ -21,7 +23,7 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
     protected List<T>? _cache;
 
     // لحتلى اقفل الملف يلي عم اشتغل عليه
-    private readonly SemaphoreSlim _lock = new(1,1);
+    protected readonly SemaphoreSlim _lock = new(1,1);
 
     private int _pendingOperations = 0;
     private const int MaxPendingOperations = 20; // بعد 20 عمليات رح اعمل snapshot 
@@ -30,14 +32,18 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
         string snapshotPath,
         string logPath,
         IFileStorage fileStorage,
-        ISerializer serializer)
+        ISerializer serializer,
+        Func<T, TJsonModel> toModel,
+        Func<TJsonModel ,T> toDomain)
     {
         _snapshotPath = snapshotPath;
         _logPath = logPath;
         _fileStorage = fileStorage;
         _serializer = serializer;
+        _toModel = toModel;
+        _toDomain = toDomain;
     }
-
+    #region CRUD Operations
     public async Task<List<T>> GetAllAsync()
     {
         if (_cache != null)
@@ -62,7 +68,6 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
         await _lock.WaitAsync();
         try
         {
-
             if (state.Any(e => e.Id == entity.Id))
                 throw new InvalidOperationException($"Entity with the same ID: {entity.Id} already exists.");
 
@@ -115,7 +120,6 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
         await _lock.WaitAsync();
         try
         {
-
             var existing = state.FirstOrDefault(e => e.Id == entity.Id);
             if(existing is null)
                 throw new KeyNotFoundException($"Entity with ID: {entity.Id} not found.");
@@ -138,9 +142,27 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
     public async Task<T?> GetByIdAsync(Guid id)
     {
         var state = await GetAllAsync();
-        return state.FirstOrDefault(e => e.Id == id);
+
+        await _lock.WaitAsync(); 
+        try
+        {
+            return state.FirstOrDefault(e => e.Id == id);
+        }
+        finally
+        {
+            _lock.Release(); 
+        }
     }
 
+    #endregion
+
+
+    /// <summary>
+    /// ملاحظة بكل العملبات ال private  ما بحط قفل القفل فقط بعمليات ال public 
+    /// مشان ما يصير في قفل للابد Deadlock
+    /// </summary>
+    /// <returns></returns>
+    #region Private Helpers Snapshot & Log
     private async Task<List<T>> LoadSnapshotAsync()
     {
         if(!File.Exists(_snapshotPath))
@@ -151,7 +173,8 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
         if(string.IsNullOrWhiteSpace(content))
             return new List<T>();
 
-        return _serializer.Deserialize<List<T>>(content) ?? new List<T>();
+        var jsonModels = _serializer.Deserialize<List<TJsonModel>>(content) ?? new List<TJsonModel>();
+        return jsonModels.Select(_toDomain).ToList();
     }
 
     private async Task<List<LogEntry<T>>> LoadLogAsync()
@@ -170,9 +193,15 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
 
         foreach (var line in lines)
         {
-            var entry = _serializer.Deserialize<LogEntry<T>>(line);
+            var entry = _serializer.Deserialize<LogEntry<TJsonModel>>(line);
             if (entry != null)
-                logEntries.Add(entry);
+                // mapper
+                logEntries.Add(new LogEntry<T>
+                {
+                    Op = entry.Op,
+                    Id = entry.Id,
+                    Entity = entry.Entity != null ? _toDomain(entry.Entity) : default
+                });
         }
         
         return logEntries;
@@ -220,7 +249,13 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
 
     private async Task AppendLogAsync(LogEntry<T> entry)
     {
-        var json = _serializer.Serialize(entry , indented: false);
+        var logToSave = new LogEntry<TJsonModel>
+        {
+            Op = entry.Op,
+            Id = entry.Id,
+            Entity = entry.Entity != null ? _toModel(entry.Entity) : default
+        };
+        var json = _serializer.Serialize(logToSave, indented: false);
         await _fileStorage.AppendLineAsync(_logPath, json);
     }
 
@@ -229,21 +264,13 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
         if(_cache == null)
             return;
 
-        await _lock.WaitAsync();
-        try
-        {
-            var snapshotJson = _serializer.Serialize(_cache , indented: true);
-            await _fileStorage.WriteAsync(_snapshotPath, snapshotJson);
+        var snapshotJson = _serializer.Serialize(_cache.Select(_toModel).ToList(), indented: true);
+        await _fileStorage.WriteAsync(_snapshotPath, snapshotJson);
 
-            // بعد ما اعمل snapshot بفرغ اللوق
-            await _fileStorage.WriteAsync(_logPath, "");
+        // بعد ما اعمل snapshot بفرغ اللوق
+        await _fileStorage.WriteAsync(_logPath, "");
 
-            _pendingOperations = 0; // رجع العداد للصفر
-        }
-        finally
-        { 
-            _lock.Release(); 
-        }
+        _pendingOperations = 0; // رجع العداد للصفر
     }
 
     private async Task MarkChangeAsync(LogEntry<T> entry)
@@ -254,5 +281,5 @@ public class JsonSnapshotLogRepository<T> : IRepository<T> where T : IEntity
         if(_pendingOperations >= MaxPendingOperations) 
             await CreateSnapshotAsync();
     }
-
+    #endregion
 }

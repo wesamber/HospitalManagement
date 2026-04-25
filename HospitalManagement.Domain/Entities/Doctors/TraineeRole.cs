@@ -4,7 +4,7 @@ namespace HospitalManagement.Domain.Entities.Doctors;
 
 public class TraineeRole : DoctorRole 
 {
-    public override string RoleName => "Trainee";
+    public override string RoleName => "trainee";
 
     private TraineeRole() { }
 

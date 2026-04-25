@@ -105,4 +105,18 @@ public class Doctor : IEntity
         return ActiveRole.CalculateSalary(systemBaseSalary);
     }
 
+    internal void LoadDepartmentIds(List<Guid> departs)
+    {
+        _departmentsIds.AddRange(departs);
+    }
+
+    internal void LoadTreatments(List<DoctorTreatment> treatments)
+    {
+        _treatments.AddRange(treatments);
+    }
+
+    internal void LoadRoles(List<DoctorRole> roles)
+    {
+        _roles.AddRange(roles);
+    }
 }

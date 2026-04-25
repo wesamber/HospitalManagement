@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace HospitalManagement.Infrastructure.Persistence.Json.Models;
 
-public class LogEntry<T> where T : IEntity
+public class LogEntry<T> 
 {
     public string Op { get; set; } = default!; // "add", "update", "delete"
     public T? Entity { get; set; }

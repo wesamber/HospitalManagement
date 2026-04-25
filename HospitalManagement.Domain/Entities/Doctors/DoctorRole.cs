@@ -17,8 +17,8 @@ public abstract class DoctorRole : IEntity
     protected DoctorRole() { }
 
     // For creating new role 
-    protected DoctorRole(DateTime startDate) 
-        : this(Guid.NewGuid(), startDate , null , true)
+    protected DoctorRole(DateTime startDate , DateTime? endDate) 
+        : this(Guid.NewGuid(), startDate , endDate , true)
     {
         IsActive = true;
     }
@@ -47,5 +47,12 @@ public abstract class DoctorRole : IEntity
         _salaryHistory.Add(new SalaryRecord(DateTime.Now, amount));
     }
     public abstract decimal CalculateSalary(decimal referenceAmount);
+
+    // هي للنخزين بدون معالجة الملفات بس اضافة
+    internal void LoadSalaryRecord(SalaryRecord record)
+    {
+        _salaryHistory.Add(record);
+    }
+
 }
 

@@ -4,7 +4,7 @@ namespace HospitalManagement.Domain.Entities.Doctors;
 
 public class ContractedRole : DoctorRole 
 {
-    public override string RoleName => "Contracted";
+    public override string RoleName => "contracted";
     public decimal Percent { get; private set; } = 0.5m; // 50%
 
     private readonly List<Guid> _treatmentIds = new();
@@ -21,7 +21,7 @@ public class ContractedRole : DoctorRole
 
     // constructor for creating new contracted role
     public ContractedRole(DateTime startDate , DateTime? endDate , decimal percent)
-        : base( startDate )
+        : base( startDate , endDate)
     {
         Percent = percent;
     }
@@ -31,4 +31,10 @@ public class ContractedRole : DoctorRole
         // راتب الطبيب المتعاقد يعتمد بشكل كامل على العلاجات التي يقدمها، وليس له راتب ثابت
         return totalTreatmentsCost * Percent; 
     }
+
+    internal void LoadTreatmentIds(IEnumerable<Guid> treatmentIds)
+    {
+        _treatmentIds.AddRange(treatmentIds);
+    }
+
 }
