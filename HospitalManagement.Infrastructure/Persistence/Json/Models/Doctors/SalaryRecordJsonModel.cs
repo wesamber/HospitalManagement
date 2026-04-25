@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HospitalManagement.Infrastructure.Persistence.Json.Models;
+namespace HospitalManagement.Infrastructure.Persistence.Json.Models.Doctors;
 
 public class SalaryRecordJsonModel
 {
-    public DateOnly RecordedAt { get; set; }
+    public DateTime RecordedAt { get; set; }
     public decimal Amount { get; set; }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HospitalManagement.Infrastructure.Persistence.Json.Models;
+namespace HospitalManagement.Infrastructure.Persistence.Json.Models.Doctors;
 
 public class DoctorRoleJsonModel
 {

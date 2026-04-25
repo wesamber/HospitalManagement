@@ -8,22 +8,57 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace HospitalManagement.Infrastructure.Persistence.Json;
-
-public class JsonTreatmentRepository : JsonSnapshotLogRepository<Treatment>, ITreatmentRepository
+//JsonSnapshotLogRepository<Treatment>, لا تنسلى هي وراثة وبدا توظيف
+public class JsonTreatmentRepository : ITreatmentRepository
 {
     public JsonTreatmentRepository(
         string snapshotPath,
         string logPath,
         IFileStorage fileStorage,
         ISerializer serializer) 
-        : base(snapshotPath, logPath, fileStorage, serializer)
+        //: base(snapshotPath, logPath, fileStorage, serializer)
     {
+    }
+
+    public Task AddAsync(Treatment entity)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task DeleteAsync(Treatment entity)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<List<Treatment>> GetAllAsync()
+    {
+        throw new NotImplementedException();
     }
 
     public IReadOnlyList<Treatment> GetByDate(DateTime dateStart, DateTime dateEnd)
     {
-        var state = _cache ?? 
-            throw new InvalidOperationException("Repository is not initialized.");
-        return state.Where(t => t.StartDate >= dateStart && t.StartDate <= dateEnd).ToList();
+        throw new NotImplementedException();
+    }
+
+    //public IReadOnlyList<Treatment> GetByDate(DateTime dateStart, DateTime dateEnd)
+    //{
+    //    var state = _cache ?? 
+    //        throw new InvalidOperationException("Repository is not initialized.");
+    //    return state.Where(t => t.StartDate >= dateStart && t.StartDate <= dateEnd).ToList();
+    //}
+
+    public Task<Treatment?> GetByIdAsync(Guid id)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IList<Treatment>> GetByIdsAsync(List<Guid> treatmentIds)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task UpdateAsync(Treatment entity)
+    {
+        throw new NotImplementedException();
     }
 }

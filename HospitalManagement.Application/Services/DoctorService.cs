@@ -3,10 +3,12 @@ using FluentValidation;
 using HospitalManagement.Application.Common;
 using HospitalManagement.Application.Common.Enums;
 using HospitalManagement.Application.DTOs.Doctors;
+using HospitalManagement.Application.DTOs.Doctors.DoctorRoles;
 using HospitalManagement.Application.Interfaces.Repositories;
 using HospitalManagement.Application.Interfaces.Services;
 using HospitalManagement.Application.Mappers.Doctors;
 using HospitalManagement.Application.Validators.Doctors;
+using HospitalManagement.Domain.Entities.Doctors;
 using HospitalManagement.Domain.Entities.Enums;
 using System;
 using System.Collections.Generic;
@@ -19,101 +21,87 @@ namespace HospitalManagement.Application.Services;
 public class DoctorService : IDoctorService
 {
     private readonly IDoctorRepository _doctorRepository;
+    private readonly ITreatmentRepository _treatmentRepository;
     private readonly IValidator<CreateDoctorDto> _createValidator;
     private readonly IValidator<UpdateDoctorDto> _updateValidator;
+    private readonly ISystemConfigRepository _configRepository;
     private readonly INumberGenerator _numberGenerator;
     private readonly IMapper _mapper;
     public DoctorService(
         IDoctorRepository doctorRepository,
+        ITreatmentRepository treatmentRepository,
         IValidator<CreateDoctorDto> createValidator,
         IValidator<UpdateDoctorDto> updateValidator,
+        ISystemConfigRepository systemConfigRepository,
         INumberGenerator numberGenerator,
         IMapper mapper)
     {
         _doctorRepository = doctorRepository;
+        _treatmentRepository = treatmentRepository;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _configRepository = systemConfigRepository;
         _numberGenerator = numberGenerator;
         _mapper = mapper;
     }
-
+    #region CRUD Operations Doctors
     public async Task<Result<DoctorDto>> CreateAsync(CreateDoctorDto dto)
     {
-        try
+        //1. validation
+        var validationResult = await _createValidator.ValidateAsync(dto);
+
+        if (!validationResult.IsValid)
         {
-            //1. validation
-            var validationResult = await _createValidator.ValidateAsync(dto);
-
-            if (!validationResult.IsValid)
-            {
-                return Result<DoctorDto>.Failure(
-                        validationResult.Errors.Select(e => e.ErrorMessage).ToList()
-                    );
-            }
-
-            // 2. check if doctor is exist
-            var existingDoctor = await _doctorRepository.ExistAsync(dto.Name , dto.DateOfBirth);
-
-            if (existingDoctor)
-            {
-                return Result<DoctorDto>.Failure("Doctor already exists.");
-            }
-
-            //3. Generate doctor number
-            var doctorNumber = _numberGenerator.GenerateUniqueNumber(NumberPerfix.Doctor);
-
-            //4. Create doctor (dtp to entity)
-            var doctor = dto.ToEntity(doctorNumber);
-
-            //5. Save to database
-            await _doctorRepository.AddAsync(doctor);
-
-            //6. convert to dto ( entity to dto)
-            var doctorDto = _mapper.Map<DoctorDto>(doctor);
-
-            return Result<DoctorDto>.SuccessResult(doctorDto);
+            return Result<DoctorDto>.Failure(
+                    validationResult.Errors.Select(e => e.ErrorMessage).ToList()
+                );
         }
-        catch (Exception ex)
+
+        // 2. check if doctor is exist
+        var existingDoctor = await _doctorRepository.ExistAsync(dto.Name , dto.DateOfBirth);
+
+        if (existingDoctor)
         {
-            return Result<DoctorDto>.Failure($"An error occurred while creating the doctor: {ex.Message}");
+            return Result<DoctorDto>.Failure("Doctor already exists.");
         }
+
+        //3. Generate doctor number
+        var doctorNumber = _numberGenerator.GenerateUniqueNumber(NumberPerfix.Doctor);
+
+        //4. Create doctor (dtp to entity)
+        var doctor = dto.ToEntity(doctorNumber);
+
+        //5. Save to database
+        await _doctorRepository.AddAsync(doctor);
+
+        //6. convert to dto ( entity to dto)
+        var doctorDto = _mapper.Map<DoctorDto>(doctor);
+
+        return Result<DoctorDto>.SuccessResult(doctorDto);
+        
     }
 
     public async Task<Result<bool>> DeleteAsync(Guid id)
     {
-        try
+        // 1. Check if doctor exists
+        var doctor = await _doctorRepository.GetByIdAsync(id);
+
+        if (doctor == null)
         {
-            // 1. Check if doctor exists
-            var doctor = await _doctorRepository.GetByIdAsync(id);
-
-            if (doctor == null)
-            {
-                return Result<bool>.Failure("Doctor not found.");
-            }
-
-            // 2. Delete doctor
-            await _doctorRepository.DeleteAsync(doctor);
-
-            return Result<bool>.SuccessResult(true);
+            return Result<bool>.Failure("Doctor not found.");
         }
-        catch (Exception ex)
-        {
-            return Result<bool>.Failure($"An error occurred while deleting the doctor: {ex.Message}");
-        }
+
+        // 2. Delete doctor
+        await _doctorRepository.DeleteAsync(doctor);
+
+        return Result<bool>.SuccessResult(true);
     }
 
     public async Task<Result<List<DoctorDto>>> GetAllAsync()
     {
-        try
-        {
-            var doctors = await _doctorRepository.GetAllAsync();
-            var doctorDtos = _mapper.Map<List<DoctorDto>>(doctors);
-            return Result<List<DoctorDto>>.SuccessResult(doctorDtos);
-        }
-        catch (Exception ex)
-        {
-            return Result<List<DoctorDto>>.Failure($"An error occurred while retrieving doctors: {ex.Message}");
-        }
+        var doctors = await _doctorRepository.GetAllAsync();
+        var doctorDtos = _mapper.Map<List<DoctorDto>>(doctors);
+        return Result<List<DoctorDto>>.SuccessResult(doctorDtos);
     }
 
     public async Task<Result<DoctorDetailsDto>> GetByIdAsync(Guid id)
@@ -142,11 +130,153 @@ public class DoctorService : IDoctorService
                     validationResult.Errors.Select(e => e.ErrorMessage).ToList()
                 );
         }
-        Enum.TryParse(dto.Specialization, out Specialization specialization);
+        if (!Enum.TryParse<Specialization>(dto.Specialization, true, out var specialization))
+        {
+            return Result<bool>.Failure("Invalid specialization value.");
+        }
         // Update doctor properties
         doctor.UpdateInfo(dto.Name,specialization, dto.DateOfBirth, dto.Address, dto.PhoneNumber, dto.Email);
         await _doctorRepository.UpdateAsync(doctor);
 
         return Result<bool>.SuccessResult(true);
     }
+    #endregion
+
+    #region GET By Properties
+    public async Task<Result<List<DoctorDto>>> GetBySpecializationAsync(string specialization)
+    {
+        if (!Enum.TryParse<Specialization>(specialization, true, out var specializationEnum))
+        {
+            return Result<List<DoctorDto>>.Failure("Invalid specialization value.");
+        }
+        var doctors = await _doctorRepository.GetBySpecializationAsync(specializationEnum);
+        var doctorDtos = _mapper.Map<List<DoctorDto>>(doctors);
+        return Result<List<DoctorDto>>.SuccessResult(doctorDtos);
+    }
+
+    public async Task<Result<List<DoctorDto>>> GetByDepartmentAsync(Guid departmentId)
+    {
+        var doctors = await _doctorRepository.GetByDepartmentAsync(departmentId);
+        var doctorDtos = _mapper.Map<List<DoctorDto>>(doctors);
+        return Result<List<DoctorDto>>.SuccessResult(doctorDtos);
+    }
+
+    public async Task<Result<DoctorDto>> GetByNumberAsync(string doctorNumber)
+    {
+        var doctor = await _doctorRepository.GetByNumberAsync(doctorNumber);
+        if (doctor == null)
+        {
+            return Result<DoctorDto>.Failure("Doctor not found.");
+        }
+        var doctorDto = _mapper.Map<DoctorDto>(doctor);
+        return Result<DoctorDto>.SuccessResult(doctorDto);
+    }
+    #endregion
+
+    #region METHODS DOMAIN
+    public async Task<Result<bool>> AssignToDepartmentAsync(Guid doctorId , Guid departmentId)
+    {
+        var doctor = await _doctorRepository.GetByIdAsync(doctorId);
+        if (doctor == null)
+        {
+            return Result<bool>.Failure("Doctor not found.");
+        }
+        doctor.AssignToDepartment(departmentId);
+        await _doctorRepository.UpdateAsync(doctor);
+        return Result<bool>.SuccessResult(true);
+    }
+
+    public async Task<Result<bool>> AddTreatmentToDoctorAsync(Guid doctorId , AddDoctorTreatmentDto dto)
+    {
+        var doctor = await _doctorRepository.GetByIdAsync(doctorId);
+        if (doctor == null)
+            return Result<bool>.Failure("Doctor not found.");
+
+        //var treatment = _mapper.Map<DoctorTreatment>(dto);
+        if (!Enum.TryParse<TreatmentRole>(dto.TreatmentRole, true, out var role))
+            return Result<bool>.Failure("Invalid treatment role.");
+
+        var treatment = new DoctorTreatment(doctorId, dto.TreatmentId, role);
+
+        doctor.AddTreatment(treatment);
+        await _doctorRepository.UpdateAsync(doctor);
+
+        return Result<bool>.SuccessResult(true);
+    }
+
+    public async Task<Result<decimal>> CalculateSalaryAsync(Guid doctorId)
+    {
+        var doctor = await _doctorRepository.GetByIdAsync(doctorId);
+        if (doctor == null)
+            return Result<decimal>.Failure("Doctor not found.");
+
+        decimal referenceAmount;
+
+        if (doctor.ActiveRole is ContractedRole)
+        {
+            var treatmentIds = doctor.Treatments.Select(t => t.TreatmentId).ToList();
+            var treatments = await _treatmentRepository.GetByIdsAsync(treatmentIds);
+            referenceAmount = treatments.Sum(t => t.Cost);
+        }
+        else
+        {
+            var config = await _configRepository.GetAsync();
+            referenceAmount = config.BaseSalary;
+        }
+        var salary = doctor.CalculateSalary(referenceAmount);
+        return Result<decimal>.SuccessResult(salary);
+    }
+
+    public async Task<Result<bool>> PromoteDoctorToPermanentAsync(Guid doctorId, decimal? baseSalary = null)
+    {
+        var doctor = await _doctorRepository.GetByIdAsync(doctorId);
+        if (doctor == null)
+            return Result<bool>.Failure("Doctor not found.");
+
+        var config = await _configRepository.GetAsync();
+        var finalSalary = baseSalary ?? config.BaseSalary;
+
+        doctor.PromoteToPermanent(finalSalary);
+        await _doctorRepository.UpdateAsync(doctor);
+
+        return Result<bool>.SuccessResult(true);
+    }
+
+    public async Task<Result<bool>> AddRoleToDoctorAsync(Guid doctorId, AddRoleDoctorDto dto)
+    {
+        var doctor = await _doctorRepository.GetByIdAsync(doctorId);
+        if (doctor == null)
+            return Result<bool>.Failure("Doctor not found.");
+
+        var config = await _configRepository.GetAsync();
+
+        DoctorRole newRole = dto.RoleName.ToLower() switch
+        {
+            // الفكرة اذا بعتت راتب وقت الانشاء معناها هاد راتب المستخدم والا خدو من الراتب المثبت
+            "permanent" => new PermanentRole(
+                startDate: dto.StartDate,
+                endDate: dto.EndDate,
+                baseSalary: dto.BaseSalary ?? config.BaseSalary),
+
+            "contracted" => new ContractedRole(
+            startDate: dto.StartDate,
+            endDate: dto.EndDate,
+            percent: dto.Percent ?? 0.5m),
+
+            "trainee" => new TraineeRole(
+            startDate: dto.StartDate,
+            endDate: dto.EndDate),
+
+            _ => null!
+        };
+
+        if (newRole == null)
+            return Result<bool>.Failure("Invalid role type.");
+
+        doctor.AddRole(newRole);
+        await _doctorRepository.UpdateAsync(doctor);
+
+        return Result<bool>.SuccessResult(true);
+    }
+    #endregion 
 }

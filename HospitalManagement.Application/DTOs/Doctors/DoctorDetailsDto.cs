@@ -1,4 +1,5 @@
 ﻿using HospitalManagement.Application.DTOs.Doctors.DoctorRoles;
+using HospitalManagement.Application.DTOs.Treatments;
 using HospitalManagement.Domain.Entities.Enums;
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,6 @@ public class DoctorDetailsDto
 
     public DoctorRoleDto? ActiveRole { get; set; }
     public List<DoctorRoleDto> Roles { get; set; } = new();
-    public List<Guid> DepartmentsIds { get; set; } = new();
-    public List<Guid> TreatmentsIds { get; set; } = new();
+    public List<string> DepartmentsIds { get; set; } = new();
+    public List<DoctorTreatmentDto> TreatmentsIds { get; set; } = new();
 }

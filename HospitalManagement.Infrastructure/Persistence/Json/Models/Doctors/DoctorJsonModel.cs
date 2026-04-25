@@ -1,12 +1,11 @@
-﻿
-namespace HospitalManagement.Infrastructure.Persistence.Json.Models;
+﻿namespace HospitalManagement.Infrastructure.Persistence.Json.Models.Doctors;
 
 public class DoctorJsonModel
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string DoctorNumber { get; set; } = string.Empty;
-    public int Specialization { get; set; }
+    public string Specialization { get; set; } = string.Empty;
     public DateOnly DateOfBirth { get; set; }
     public string? Address { get; set; }
     public string? PhoneNumber { get; set; }

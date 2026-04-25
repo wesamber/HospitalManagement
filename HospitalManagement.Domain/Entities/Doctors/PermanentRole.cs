@@ -2,9 +2,9 @@ using HospitalManagement.Domain.Contracts;
 
 namespace HospitalManagement.Domain.Entities.Doctors;
 
-public class PermanentRole : DoctorRole 
+public class PermanentRole : DoctorRole
 {
-    public override string RoleName => "Permanent";
+    public override string RoleName => "permanent";
     public decimal BaseSalary { get;private set; }
 
     private PermanentRole() { }
@@ -17,8 +17,8 @@ public class PermanentRole : DoctorRole
     }
 
     // constructor for loading
-    public PermanentRole(Guid id, DateTime startDate,DateTime? endDate , decimal baseSalary)
-        : base(id, startDate , endDate , true)
+    public PermanentRole(Guid id, DateTime startDate,DateTime? endDate,bool isActive , decimal baseSalary)
+        : base(id, startDate , endDate , isActive)
     {
         BaseSalary = baseSalary;
     }

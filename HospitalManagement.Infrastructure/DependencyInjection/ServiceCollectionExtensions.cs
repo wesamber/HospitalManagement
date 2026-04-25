@@ -53,6 +53,15 @@ public static class ServiceCollectionExtensions
                     sp.GetRequiredService<IFileStorage>(),
                     sp.GetRequiredService<ISerializer>()
                 ));
+
+            services.AddScoped<ISystemConfigRepository>(sp =>
+                new JsonSystemConfigRepository(
+                filePath: "Data/system-config.json",
+                fileStorage: sp.GetRequiredService<IFileStorage>(),
+                serializer: sp.GetRequiredService<ISerializer>()
+                 ));
+
+            services.AddScoped<ISystemConfigService, SystemConfigService>();
         }
         else if(storageOption.ActiveProvider == "Database")
         {
