@@ -8,10 +8,12 @@ using HospitalManagement.Application.Interfaces.Repositories;
 using HospitalManagement.Application.Interfaces.Services;
 using HospitalManagement.Application.Mappers.Doctors;
 using HospitalManagement.Application.Validators.Doctors;
+using HospitalManagement.Domain.Entities.Config;
 using HospitalManagement.Domain.Entities.Doctors;
 using HospitalManagement.Domain.Entities.Enums;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,6 +26,7 @@ public class DoctorService : IDoctorService
     private readonly ITreatmentRepository _treatmentRepository;
     private readonly IValidator<CreateDoctorDto> _createValidator;
     private readonly IValidator<UpdateDoctorDto> _updateValidator;
+    private readonly IValidator<AddRoleDoctorDto> _addRoleValidator;
     private readonly ISystemConfigRepository _configRepository;
     private readonly INumberGenerator _numberGenerator;
     private readonly IMapper _mapper;
@@ -32,6 +35,7 @@ public class DoctorService : IDoctorService
         ITreatmentRepository treatmentRepository,
         IValidator<CreateDoctorDto> createValidator,
         IValidator<UpdateDoctorDto> updateValidator,
+        IValidator<AddRoleDoctorDto> addRoleValidator,
         ISystemConfigRepository systemConfigRepository,
         INumberGenerator numberGenerator,
         IMapper mapper)
@@ -40,6 +44,7 @@ public class DoctorService : IDoctorService
         _treatmentRepository = treatmentRepository;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _addRoleValidator = addRoleValidator;
         _configRepository = systemConfigRepository;
         _numberGenerator = numberGenerator;
         _mapper = mapper;
@@ -47,13 +52,26 @@ public class DoctorService : IDoctorService
     #region CRUD Operations Doctors
     public async Task<Result<DoctorDto>> CreateAsync(CreateDoctorDto dto)
     {
-        //1. validation
+        //1. validation for doctor data
         var validationResult = await _createValidator.ValidateAsync(dto);
 
         if (!validationResult.IsValid)
         {
             return Result<DoctorDto>.Failure(
                     validationResult.Errors.Select(e => e.ErrorMessage).ToList()
+                );
+        }
+
+        // split add role doctor from create doctor
+        var addRoleDoctorDto = dto.SplitRoleFromDto();
+        
+        //1.2 validate for Role doctor
+        var validationRoleResult = await _addRoleValidator.ValidateAsync(addRoleDoctorDto);
+
+        if (!validationRoleResult.IsValid)
+        {
+            return Result<DoctorDto>.Failure(
+                    validationRoleResult.Errors.Select(e => e.ErrorMessage).ToList()
                 );
         }
 
@@ -65,16 +83,28 @@ public class DoctorService : IDoctorService
             return Result<DoctorDto>.Failure("Doctor already exists.");
         }
 
-        //3. Generate doctor number
+        // الراتب الاساسي بالمشفى 
+        var config = await _configRepository.GetAsync();
+
+        //3. create role doctor
+        var initialRole = CreateInitialRole(addRoleDoctorDto, config);
+
+        //3.1 archive role that created
+        ArchiveInitialSalary(initialRole, config.BaseSalary);
+
+        //4. Generate doctor number
         var doctorNumber = _numberGenerator.GenerateUniqueNumber(NumberPerfix.Doctor);
 
-        //4. Create doctor (dtp to entity)
+        //5. Create doctor (dto to entity)
         var doctor = dto.ToEntity(doctorNumber);
 
-        //5. Save to database
+        //6. add role doctor to doctor
+        doctor.AddRole(initialRole);
+
+        //7. Save to database
         await _doctorRepository.AddAsync(doctor);
 
-        //6. convert to dto ( entity to dto)
+        //8. convert to dto ( entity to dto)
         var doctorDto = _mapper.Map<DoctorDto>(doctor);
 
         return Result<DoctorDto>.SuccessResult(doctorDto);
@@ -161,15 +191,15 @@ public class DoctorService : IDoctorService
         return Result<List<DoctorDto>>.SuccessResult(doctorDtos);
     }
 
-    public async Task<Result<DoctorDto>> GetByNumberAsync(string doctorNumber)
+    public async Task<Result<DoctorDetailsDto>> GetByNumberAsync(string doctorNumber)
     {
         var doctor = await _doctorRepository.GetByNumberAsync(doctorNumber);
         if (doctor == null)
         {
-            return Result<DoctorDto>.Failure("Doctor not found.");
+            return Result<DoctorDetailsDto>.Failure("Doctor not found.");
         }
-        var doctorDto = _mapper.Map<DoctorDto>(doctor);
-        return Result<DoctorDto>.SuccessResult(doctorDto);
+        var doctorDetailsDto = _mapper.Map<DoctorDetailsDto>(doctor);
+        return Result<DoctorDetailsDto>.SuccessResult(doctorDetailsDto);
     }
     #endregion
 
@@ -250,33 +280,76 @@ public class DoctorService : IDoctorService
 
         var config = await _configRepository.GetAsync();
 
-        DoctorRole newRole = dto.RoleName.ToLower() switch
-        {
-            // الفكرة اذا بعتت راتب وقت الانشاء معناها هاد راتب المستخدم والا خدو من الراتب المثبت
-            "permanent" => new PermanentRole(
-                startDate: dto.StartDate,
-                endDate: dto.EndDate,
-                baseSalary: dto.BaseSalary ?? config.BaseSalary),
-
-            "contracted" => new ContractedRole(
-            startDate: dto.StartDate,
-            endDate: dto.EndDate,
-            percent: dto.Percent ?? 0.5m),
-
-            "trainee" => new TraineeRole(
-            startDate: dto.StartDate,
-            endDate: dto.EndDate),
-
-            _ => null!
-        };
-
-        if (newRole == null)
-            return Result<bool>.Failure("Invalid role type.");
+        // create new role and archive his salary
+        var newRole = CreateInitialRole(dto, config);
+        ArchiveInitialSalary(newRole, config.BaseSalary);
 
         doctor.AddRole(newRole);
         await _doctorRepository.UpdateAsync(doctor);
 
         return Result<bool>.SuccessResult(true);
     }
-    #endregion 
+    #endregion
+
+    #region Private Methods
+    private DoctorRole CreateInitialRole(AddRoleDoctorDto dto , SystemConfig systemConfig)
+    {
+        DoctorRole role = dto.RoleName.ToLower() switch
+        {
+            "permanent" => new PermanentRole(dto.StartDate, dto.EndDate, dto.BaseSalary ?? systemConfig.BaseSalary),
+            "contracted" => new ContractedRole(dto.StartDate, dto.EndDate, dto.Percent ?? 0.5m),
+            "trainee" => new TraineeRole(dto.StartDate, dto.EndDate),
+            _ => throw new Exception("Invalid Role Type")
+        };
+
+        return role;
+    }
+
+    private void ArchiveInitialSalary(DoctorRole role, decimal systemBaseSalary)
+    {
+        decimal amountToArchive = role switch
+        {
+            PermanentRole p => p.BaseSalary,
+            ContractedRole c => c.Percent,
+            TraineeRole t => t.CalculateSalary(systemBaseSalary), // بيحسب الـ 50% تلقائياً
+            _ => 0
+        };
+
+        role.ArchiveCurrentSalary(amountToArchive);
+    }
+    #endregion
+
+    #region Background Methods
+    public async Task UpdateTraineeSalariesAsync()
+    {
+        var doctors = await _doctorRepository.GetAllAsync();
+        var config = await _configRepository.GetAsync();
+        bool changed = false;
+
+        foreach (var doctor in doctors)
+        {
+            // إذا كان الدور الحالي متدرباً ونشطاً
+            if (doctor.ActiveRole is TraineeRole trainee)
+            {
+                var currentCalculatedSalary = trainee.CalculateSalary(config.BaseSalary);
+
+                // جلب آخر راتب تم أرشفته لهذا الدور
+                var lastArchivedSalary = trainee.SalaryHistory.LastOrDefault()?.Amount;
+
+                // إذا اختلف الراتب (بسبب زيادة سنوات الخدمة أو تغير الراتب الأساسي في Config)
+                if (lastArchivedSalary != currentCalculatedSalary)
+                {
+                    trainee.ArchiveCurrentSalary(currentCalculatedSalary);
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed)
+        {
+            foreach (var doc in doctors)
+                await _doctorRepository.UpdateAsync(doc);
+        }
+    }
+    #endregion
 }

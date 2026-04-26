@@ -86,8 +86,19 @@ public class Doctor : IEntity
 
     public void PromoteToPermanent(decimal baseSalary)
     {
-        ActiveRole?.Deactivate(DateTime.Now);
-        _roles.Add(new PermanentRole(DateTime.Now, null, baseSalary));
+        // التأكد أن الدور "النشط حالياً" هو دور متدرب
+        if (ActiveRole is not TraineeRole)
+            throw new InvalidOperationException("Only doctors currently in a Trainee role can be promoted to Permanent.");
+
+        // إيقاف الدور الحالي (المتدرب)
+        ActiveRole.Deactivate(DateTime.Now);
+
+        // إضافة الدور الدائم الجديد
+        var permanentRole = new PermanentRole(DateTime.Now, null, baseSalary);
+
+        permanentRole.ArchiveCurrentSalary(baseSalary);
+
+        _roles.Add(permanentRole);
     }
 
     public void AddTreatment(DoctorTreatment treatment)

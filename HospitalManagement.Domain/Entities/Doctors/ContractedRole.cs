@@ -24,6 +24,7 @@ public class ContractedRole : DoctorRole
         : base( startDate , endDate)
     {
         Percent = percent;
+        ArchiveCurrentSalary(percent);
     }
 
     public override decimal CalculateSalary(decimal totalTreatmentsCost)

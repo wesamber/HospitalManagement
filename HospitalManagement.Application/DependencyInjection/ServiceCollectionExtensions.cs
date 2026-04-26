@@ -3,6 +3,7 @@ using FluentValidation;
 using HospitalManagement.Application.Interfaces.Services;
 using HospitalManagement.Application.Mappers.Doctors;
 using HospitalManagement.Application.Services;
+using HospitalManagement.Application.Services.BackgroundServices;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
@@ -16,6 +17,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDoctorService, DoctorService>();
         services.AddScoped<IPatientService, PatientService>();
         services.AddScoped<ITreatmentService, TreatmentService>();
+
+        services.AddHostedService<TraineeSalaryUpdateWorker>();
 
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
         services.AddAutoMapper(Assembly.GetExecutingAssembly());

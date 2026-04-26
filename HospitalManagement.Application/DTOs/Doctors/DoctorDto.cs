@@ -8,10 +8,11 @@ using System.Threading.Tasks;
 
 namespace HospitalManagement.Application.DTOs.Doctors;
 
-public class DoctorDto 
+public class DoctorDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string DoctorNumber { get; set; } = string.Empty;
     public string Specialization { get; set; } = string.Empty;
+    public string? ActiveRole { get; set; }
 }
