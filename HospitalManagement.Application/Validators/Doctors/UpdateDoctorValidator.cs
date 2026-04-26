@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using HospitalManagement.Application.DTOs.Doctors;
+using HospitalManagement.Domain.Entities.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +18,9 @@ public class UpdateDoctorValidator : AbstractValidator<UpdateDoctorDto>
             .MaximumLength(100).WithMessage("Name cannot exceed 100 characters.");
 
         RuleFor(x => x.Specialization)
-            .IsInEnum().WithMessage("Invalid specialization value.");
+             .NotEmpty().WithMessage("Specialization is required.")
+             .Must(s => Enum.TryParse<Specialization>(s, out _))
+             .WithMessage("Invalid specialization value.");
 
         RuleFor(x => x.DateOfBirth)
             .LessThan(DateOnly.FromDateTime(DateTime.Now))

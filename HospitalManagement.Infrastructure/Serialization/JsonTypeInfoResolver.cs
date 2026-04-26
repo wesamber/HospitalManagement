@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 
@@ -17,7 +18,8 @@ public class JsonTypeInfoResolver : DefaultJsonTypeInfoResolver
     {
         var jsonTypeInfo = base.GetTypeInfo(type, options);
 
-        if(type == typeof(Patient))
+
+        if (type == typeof(Patient))
         {
             jsonTypeInfo.PolymorphismOptions = new JsonPolymorphismOptions
             {

@@ -22,7 +22,7 @@ public interface IDoctorService
     #region GET By Properties
     Task<Result<List<DoctorDto>>> GetBySpecializationAsync(string specialization);
     Task<Result<List<DoctorDto>>> GetByDepartmentAsync(Guid departmentId);
-    Task<Result<DoctorDto>> GetByNumberAsync(string doctorNumber);
+    Task<Result<DoctorDetailsDto>> GetByNumberAsync(string doctorNumber);
     #endregion
 
     #region METHODS DOMAIN
@@ -32,5 +32,9 @@ public interface IDoctorService
     Task<Result<bool>> PromoteDoctorToPermanentAsync(Guid doctorId, decimal? baseSalary = null);
     Task<Result<bool>> AddRoleToDoctorAsync(Guid doctorId, AddRoleDoctorDto dto);
 
+    #endregion
+
+    #region Methods Background
+    Task UpdateTraineeSalariesAsync();
     #endregion
 }

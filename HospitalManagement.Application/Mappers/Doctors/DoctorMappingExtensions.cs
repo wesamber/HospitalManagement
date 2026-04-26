@@ -1,4 +1,5 @@
 ﻿using HospitalManagement.Application.DTOs.Doctors;
+using HospitalManagement.Application.DTOs.Doctors.DoctorRoles;
 using HospitalManagement.Domain.Entities.Doctors;
 using HospitalManagement.Domain.Entities.Enums;
 using System;
@@ -24,5 +25,17 @@ public static class DoctorMappingExtensions
             phoneNumber: dto.PhoneNumber,
             email: dto.Email
         );
+    }
+
+    public static AddRoleDoctorDto SplitRoleFromDto(this CreateDoctorDto dto)
+    {
+        return new AddRoleDoctorDto
+        {
+            RoleName = dto.RoleName,
+            StartDate = dto.StartDate,
+            EndDate = dto.EndDate,
+            BaseSalary = dto.BaseSalary,
+            Percent = dto.Percent
+        };
     }
 }

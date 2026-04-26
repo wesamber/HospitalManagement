@@ -18,4 +18,13 @@ public class CreateDoctorDto
     public string? Address { get; set; }
     public string? PhoneNumber { get; set; }
     public string? Email { get; set; }
+
+    // properties for roles
+    public string RoleName { get; set; } = string.Empty; // Permanent , Contracted , Contarcted
+    public DateTime StartDate { get; set; }
+
+    // حسب النوع بيدخل الحقل
+    public DateTime? EndDate { get; set; } // contractedRole , كل الادوار اختياري 
+    public decimal? BaseSalary { get; set; } // PermanentRole
+    public decimal? Percent { get; set; } // ContractedRole
 }

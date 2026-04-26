@@ -12,7 +12,7 @@ public class AddRoleDoctorDto
     public DateTime StartDate { get; set; }
 
     // حسب النوع بيدخل الحقل
-    public DateTime? EndDate { get; set; } // contractedRole
+    public DateTime? EndDate { get; set; } // contractedRole , كل الادوار اختياري 
     public decimal? BaseSalary { get; set; } // PermanentRole
     public decimal? Percent { get; set; } // ContractedRole
 }

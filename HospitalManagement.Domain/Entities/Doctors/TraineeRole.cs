@@ -24,7 +24,7 @@ public class TraineeRole : DoctorRole
     }
 
     // هل صار وقت الترقية؟
-    public bool IsEligibleForPromotion() 
+    public bool IsEligibleForPromotion()    
     {
         return (DateTime.Now - StartDate).TotalDays >= 365 * 2;
     }
