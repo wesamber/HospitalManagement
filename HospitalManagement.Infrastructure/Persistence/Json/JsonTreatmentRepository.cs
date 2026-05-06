@@ -8,8 +8,9 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace HospitalManagement.Infrastructure.Persistence.Json;
-//JsonSnapshotLogRepository<Treatment>, لا تنسلى هي وراثة وبدا توظيف
+
 public class JsonTreatmentRepository : ITreatmentRepository
+    //JsonSnapshotLogRepository<Treatment>, ITreatmentRepository
 {
     public JsonTreatmentRepository(
         string snapshotPath,
@@ -40,12 +41,15 @@ public class JsonTreatmentRepository : ITreatmentRepository
         throw new NotImplementedException();
     }
 
-    //public IReadOnlyList<Treatment> GetByDate(DateTime dateStart, DateTime dateEnd)
-    //{
-    //    var state = _cache ?? 
-    //        throw new InvalidOperationException("Repository is not initialized.");
-    //    return state.Where(t => t.StartDate >= dateStart && t.StartDate <= dateEnd).ToList();
-    //}
+    public Task<IList<Treatment>> GetByDoctorAndPeriodAsync(Guid doctorId, DateTime startDate, DateTime endDate)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<IList<Treatment>> GetByDoctorAsync(Guid doctorId)
+    {
+        throw new NotImplementedException();
+    }
 
     public Task<Treatment?> GetByIdAsync(Guid id)
     {
@@ -61,4 +65,49 @@ public class JsonTreatmentRepository : ITreatmentRepository
     {
         throw new NotImplementedException();
     }
+
+    //public IReadOnlyList<Treatment> GetByDate(DateTime dateStart, DateTime dateEnd)
+    //{
+    //    var state = _cache ?? 
+    //        throw new InvalidOperationException("Repository is not initialized.");
+    //    return state.Where(t => t.StartDate >= dateStart && t.StartDate <= dateEnd).ToList();
+    //}
+
+    //public Task<IList<Treatment>> GetByIdsAsync(List<Guid> treatmentIds)
+    //{
+    //    var state = _cache ?? 
+    //        throw new InvalidOperationException("Repository is not initialized.");
+    //    var result = state.Where(t => treatmentIds.Contains(t.Id)).Cast<Treatment>().ToList();
+    //    return Task.FromResult<IList<Treatment>>(result);
+    //}
+
+    //public Task<IList<Treatment>> GetByDoctorAsync(Guid doctorId)
+    //{
+    //    var state = _cache ?? 
+    //        throw new InvalidOperationException("Repository is not initialized.");
+
+    //    // For TreatmentInternal, check the Doctors collection
+    //    var internalTreatments = state.OfType<TreatmentInternal>()
+    //        .Where(t => t.Doctors.Any(d => d.DoctorId == doctorId))
+    //        .Cast<Treatment>()
+    //        .ToList();
+
+    //    return Task.FromResult<IList<Treatment>>(internalTreatments);
+    //}
+
+    //public Task<IList<Treatment>> GetByDoctorAndPeriodAsync(Guid doctorId, DateTime startDate, DateTime endDate)
+    //{
+    //    var state = _cache ?? 
+    //        throw new InvalidOperationException("Repository is not initialized.");
+
+    //    // For TreatmentInternal, check the Doctors collection and date range
+    //    var result = state.OfType<TreatmentInternal>()
+    //        .Where(t => t.Doctors.Any(d => d.DoctorId == doctorId) && 
+    //                    t.StartDate >= startDate && 
+    //                    t.StartDate <= endDate)
+    //        .Cast<Treatment>()
+    //        .ToList();
+
+    //    return Task.FromResult<IList<Treatment>>(result);
+    //}
 }

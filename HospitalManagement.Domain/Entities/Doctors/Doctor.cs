@@ -25,7 +25,7 @@ public class Doctor : IEntity
     public IReadOnlyList<DoctorRole> Roles => _roles.AsReadOnly();
 
     public DoctorRole? ActiveRole => _roles?.FirstOrDefault(r => r.IsActive);
-    
+
     protected Doctor() { }
 
     // constructor for loading 
@@ -51,8 +51,6 @@ public class Doctor : IEntity
         string? address , string? phoneNumber , string? email)
         :this(Guid.NewGuid() , name, doctorNumber, specialization, dob, address, phoneNumber, email)
     {
-        Name = name;
-        DoctorNumber = doctorNumber;
         Specialization = specialization;
         DateOfBirth = dob;
         Address = address;

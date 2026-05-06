@@ -240,21 +240,29 @@ public class DoctorService : IDoctorService
         if (doctor == null)
             return Result<decimal>.Failure("Doctor not found.");
 
-        decimal referenceAmount;
+        decimal currentSalary = 0;
 
         if (doctor.ActiveRole is ContractedRole)
         {
-            var treatmentIds = doctor.Treatments.Select(t => t.TreatmentId).ToList();
-            var treatments = await _treatmentRepository.GetByIdsAsync(treatmentIds);
-            referenceAmount = treatments.Sum(t => t.Cost);
+            // جلب العمليات الفعلية من بداية الشهر لحالياً
+            var currentMonth = DateTime.Now;
+            var monthStart = new DateTime(currentMonth.Year, currentMonth.Month, 1);
+            var monthEnd = currentMonth; // لحد اليوم الحالي
+
+            var treatments = await _treatmentRepository.GetByDoctorAndPeriodAsync(doctorId, monthStart, monthEnd);
+            var referenceAmount = treatments.Sum(t => t.Cost);
+
+            // حساب فقط - بدون تخزين
+            // التخزين يتم فقط في ArchivePreviousMonthSalariesAsync أو عند تغيير الدور
+            currentSalary = doctor.CalculateSalary(referenceAmount);
         }
         else
         {
             var config = await _configRepository.GetAsync();
-            referenceAmount = config.BaseSalary;
+            currentSalary = doctor.CalculateSalary(config.BaseSalary);
         }
-        var salary = doctor.CalculateSalary(referenceAmount);
-        return Result<decimal>.SuccessResult(salary);
+
+        return Result<decimal>.SuccessResult(currentSalary);
     }
 
     public async Task<Result<bool>> PromoteDoctorToPermanentAsync(Guid doctorId, decimal? baseSalary = null)
@@ -278,6 +286,12 @@ public class DoctorService : IDoctorService
         if (doctor == null)
             return Result<bool>.Failure("Doctor not found.");
 
+        // إذا كان الدور الحالي متعاقد، خزّن راتبه المتراكم قبل إضافة دور جديد
+        if (doctor.ActiveRole is ContractedRole contractedRole)
+        {
+            await ArchiveCurrentMonthSalaryForContractedAsync(doctor.Id, contractedRole);
+        }
+
         var config = await _configRepository.GetAsync();
 
         // create new role and archive his salary
@@ -294,6 +308,13 @@ public class DoctorService : IDoctorService
     #region Private Methods
     private DoctorRole CreateInitialRole(AddRoleDoctorDto dto , SystemConfig systemConfig)
     {
+        // ContractedRole.Percent must be a ratio between 0 and 1 (e.g., 0.5 = 50%).
+        if (dto.RoleName.Equals("contracted", StringComparison.OrdinalIgnoreCase) && dto.Percent is not null)
+        {
+            if (dto.Percent <= 0m || dto.Percent > 1m)
+                throw new Exception("Percent for contracted role must be between 0 and 1.");
+        }
+
         DoctorRole role = dto.RoleName.ToLower() switch
         {
             "permanent" => new PermanentRole(dto.StartDate, dto.EndDate, dto.BaseSalary ?? systemConfig.BaseSalary),
@@ -307,19 +328,90 @@ public class DoctorService : IDoctorService
 
     private void ArchiveInitialSalary(DoctorRole role, decimal systemBaseSalary)
     {
+        // SalaryHistory should only store monetary monthly amounts.
+        // For ContractedRole, salary depends on treatments and is archived at month-end or before role change.
+        if (role is ContractedRole)
+            return;
+
         decimal amountToArchive = role switch
         {
             PermanentRole p => p.BaseSalary,
-            ContractedRole c => c.Percent,
-            TraineeRole t => t.CalculateSalary(systemBaseSalary), // بيحسب الـ 50% تلقائياً
-            _ => 0
+            TraineeRole t => t.CalculateSalary(systemBaseSalary),
+            _ => 0m
         };
 
         role.ArchiveCurrentSalary(amountToArchive);
     }
+
+    /// <summary>
+    /// تخزين الراتب المتراكم للشهر الحالي للطبيب المتعاقد
+    /// يتم استدعاؤها عند تغيير الدور قبل انتهاء الشهر
+    /// </summary>
+    private async Task ArchiveCurrentMonthSalaryForContractedAsync(Guid doctorId, ContractedRole contractedRole)
+    {
+        var now = DateTime.Now;
+
+        // تحقق إذا كان هناك راتب مؤرشف للشهر الحالي (تجنب التخزين المكرر)
+        var existingRecord = contractedRole.GetSalaryForMonth(now.Year, now.Month);
+        if (existingRecord != null)
+            return; // تم التخزين مسبقاً
+
+        // احسب راتب الشهر الحالي من بداية الشهر لحد الآن
+        var monthStart = new DateTime(now.Year, now.Month, 1);
+        var treatments = await _treatmentRepository.GetByDoctorAndPeriodAsync(doctorId, monthStart, now);
+        var totalCost = treatments.Sum(t => t.Cost);
+        var salary = totalCost * contractedRole.Percent;
+
+        // خزّن الراتب المتراكم للشهر الحالي
+        contractedRole.ArchiveCurrentSalary(salary);
+    }
     #endregion
 
     #region Background Methods
+
+    /// <summary>
+    /// إغلاق راتب المتعاقدين للشهر الماضي وتخزينه
+    /// يتم استدعاء هذه الدالة في أول يوم من كل شهر
+    /// </summary>
+    public async Task ArchivePreviousMonthSalariesAsync()
+    {
+        var doctors = await _doctorRepository.GetAllAsync();
+        var config = await _configRepository.GetAsync();
+        bool changed = false;
+
+        foreach (var doctor in doctors)
+        {
+            if (doctor.ActiveRole is ContractedRole contractedRole)
+            {
+                var now = DateTime.Now;
+                var previousMonth = now.AddMonths(-1);
+
+                // تحقق إذا كان هناك راتب مؤرشف للشهر الماضي (تجنب التخزين المكرر)
+                var existingRecord = contractedRole.GetSalaryForMonth(previousMonth.Year, previousMonth.Month);
+                if (existingRecord != null)
+                    continue;
+
+                // احسب راتب الشهر الماضي
+                var monthStart = new DateTime(previousMonth.Year, previousMonth.Month, 1);
+                var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+
+                var treatments = await _treatmentRepository.GetByDoctorAndPeriodAsync(doctor.Id, monthStart, monthEnd);
+                var totalCost = treatments.Sum(t => t.Cost);
+                var salary = totalCost * contractedRole.Percent;
+
+                // خزّن الراتب الفعلي (وليس النسبة)
+                contractedRole.ArchiveCurrentSalary(salary);
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            foreach (var doc in doctors)
+                await _doctorRepository.UpdateAsync(doc);
+        }
+    }
+
     public async Task UpdateTraineeSalariesAsync()
     {
         var doctors = await _doctorRepository.GetAllAsync();

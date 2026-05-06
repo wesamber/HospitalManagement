@@ -6,5 +6,6 @@ using System.Threading.Tasks;
 
 namespace HospitalManagement.Domain.Entities.Doctors
 {
-    public record SalaryRecordDto(DateTime Date, decimal Amount);
+
+    public record SalaryRecordDto(int Year, int Month, decimal Amount);
 }
