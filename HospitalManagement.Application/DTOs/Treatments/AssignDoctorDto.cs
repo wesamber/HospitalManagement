@@ -11,5 +11,5 @@ public class AssignDoctorDto
 {
     public Guid TreatmentId { get; set; }
     public Guid DoctorId { get; set; }
-    public TreatmentRole Role { get; set; }
+    public string RoleInTreatment { get; set; } = string.Empty;
 }

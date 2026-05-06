@@ -10,7 +10,7 @@ public class ContractedRole : DoctorRole
     private readonly List<Guid> _treatmentIds = new();
     public IReadOnlyList<Guid> TreatmentIds => _treatmentIds.AsReadOnly();
 
-    private ContractedRole() { }
+    public ContractedRole() { }
 
     // constructor for loading 
     public ContractedRole(Guid id , DateTime startDate , DateTime? endDate ,bool isActive ,  decimal percent)

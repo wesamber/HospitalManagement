@@ -21,6 +21,8 @@ public class DoctorDetailsDto
     public string? Address { get; set; }
     public string? PhoneNumber { get; set; }
     public string? Email { get; set; }
+    public decimal? ActiveRolePercent { get; set; }   // contract
+    public decimal? ActiveRoleBaseSalary { get; set; } // Permanent
 
     public string? ActiveRole { get; set; }
     public List<DoctorRoleDto> Roles { get; set; } = new();

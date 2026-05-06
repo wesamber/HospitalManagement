@@ -11,7 +11,7 @@ public class InternalPatient : Patient , IEntity
 
     private readonly List<Guid> _internalTreatments = new();
     public IReadOnlyList<Guid> InternalTreatments => _internalTreatments.AsReadOnly();
-    protected InternalPatient() { }
+    public InternalPatient() { }
 
     // constructor for creating
     public InternalPatient(
@@ -31,12 +31,15 @@ public class InternalPatient : Patient , IEntity
         string? phone, string? email,
         Guid departmentId , 
         IEnumerable<Guid>? internalTreatments, 
-        IEnumerable<Guid>? externalTreatments)
+        IEnumerable<Guid>? externalTreatments,
+        bool isDischarged,
+        DateTime? dischargeDate)
         : base(id, patientNumber, name, dateOfBirth, address, phone, email, 
               externalTreatments, type: "internal")
     {
         DepartmentId = departmentId;
-
+        IsDischarged = isDischarged;
+        DischargeDate = dischargeDate;
         if(internalTreatments != null) 
             _internalTreatments.AddRange(internalTreatments);
     }

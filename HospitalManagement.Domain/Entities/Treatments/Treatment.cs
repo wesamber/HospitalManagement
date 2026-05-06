@@ -9,7 +9,7 @@ public abstract class Treatment : IEntity
     public DateTime StartDate { get;protected set; }
     public decimal Cost { get;protected set; }
 
-    protected Treatment() { }
+    public Treatment() { }
 
     // constructor for loading
     protected Treatment(Guid id, string numberTreatment, DateTime startDate, decimal cost)

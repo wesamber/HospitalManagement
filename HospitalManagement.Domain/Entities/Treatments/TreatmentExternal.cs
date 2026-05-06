@@ -6,7 +6,7 @@ public class TreatmentExternal : Treatment
     public string DoctorName { get;private set; } = string.Empty;
     public Guid PatientId { get;private set; }
 
-    private TreatmentExternal() { }
+    public TreatmentExternal() { }
 
     // constructor for loading
     public TreatmentExternal(

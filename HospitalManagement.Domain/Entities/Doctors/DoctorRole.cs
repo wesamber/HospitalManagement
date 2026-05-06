@@ -14,7 +14,7 @@ public abstract class DoctorRole : IEntity
     private readonly List<SalaryRecord> _salaryHistory = new();
     public IReadOnlyList<SalaryRecord> SalaryHistory => _salaryHistory.AsReadOnly();
 
-    protected DoctorRole() { }
+    public DoctorRole() { }
 
     // For creating new role 
     protected DoctorRole(DateTime startDate , DateTime? endDate) 

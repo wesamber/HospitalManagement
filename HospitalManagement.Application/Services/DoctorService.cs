@@ -12,6 +12,7 @@ using HospitalManagement.Application.Validators.Doctors;
 using HospitalManagement.Domain.Entities.Config;
 using HospitalManagement.Domain.Entities.Doctors;
 using HospitalManagement.Domain.Entities.Enums;
+using HospitalManagement.Domain.Entities.Treatments;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -44,6 +45,7 @@ public class DoctorService : IDoctorService
         IMapper mapper)
     {
         _doctorRepository = doctorRepository;
+        _departmentRepository = departmentRepository;
         _treatmentRepository = treatmentRepository;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
@@ -246,7 +248,9 @@ public class DoctorService : IDoctorService
         }
 
         doctor.AssignToDepartment(departmentId);
+        department.AssignDoctor(doctorId);
         await _doctorRepository.UpdateAsync(doctor);
+        await _departmentRepository.UpdateAsync(department);
         return Result<bool>.SuccessResult(true);
     }
 
@@ -256,14 +260,28 @@ public class DoctorService : IDoctorService
         if (doctor == null)
             return Result<bool>.Failure("Doctor not found.");
 
-        //var treatment = _mapper.Map<DoctorTreatment>(dto);
         if (!Enum.TryParse<TreatmentRole>(dto.TreatmentRole, true, out var role))
             return Result<bool>.Failure("Invalid treatment role.");
 
-        var treatment = new DoctorTreatment(doctorId, dto.TreatmentId, role);
+        var treatment = await _treatmentRepository.GetByIdAsync(dto.TreatmentId);
+        if (treatment == null)
+            return Result<bool>.Failure("Treatment not found.");
 
-        doctor.AddTreatment(treatment);
+        if(doctor.Treatments.Any(dt => dt.TreatmentId == dto.TreatmentId))
+            return Result<bool>.Failure("Doctor is already assigned to this treatment.");
+
+        if (treatment is not TreatmentInternal internalTreatment)
+            return Result<bool>.Failure("Only internal treatments can have assigned doctors.");
+
+        var treatmentDoctor = new DoctorTreatment(doctorId, dto.TreatmentId, role);
+
+        // ربط من طرف الدكتور
+        doctor.AddTreatment(treatmentDoctor);
         await _doctorRepository.UpdateAsync(doctor);
+
+        // ربط من طرف المعالجة
+        internalTreatment.AddDoctor(treatmentDoctor);
+        await _treatmentRepository.UpdateAsync(internalTreatment);
 
         return Result<bool>.SuccessResult(true);
     }
@@ -278,16 +296,20 @@ public class DoctorService : IDoctorService
 
         if (doctor.ActiveRole is ContractedRole)
         {
-            // جلب العمليات الفعلية من بداية الشهر لحالياً
-            var currentMonth = DateTime.Now;
-            var monthStart = new DateTime(currentMonth.Year, currentMonth.Month, 1);
-            var monthEnd = currentMonth; // لحد اليوم الحالي
+            var now = DateTime.Now;
+            var monthStart = new DateTime(now.Year, now.Month, 1);
 
-            var treatments = await _treatmentRepository.GetByDoctorAndPeriodAsync(doctorId, monthStart, monthEnd);
-            var referenceAmount = treatments.Sum(t => t.Cost);
+            var doctorTreatmentIds = doctor.Treatments
+                .Select(dt => dt.TreatmentId)
+                .ToList();
 
-            // حساب فقط - بدون تخزين
-            // التخزين يتم فقط في ArchivePreviousMonthSalariesAsync أو عند تغيير الدور
+            var allTreatments = await _treatmentRepository.GetByIdsAsync(doctorTreatmentIds);
+
+            var monthlyTreatments = allTreatments
+                .Where(t => t.StartDate >= monthStart && t.StartDate <= now)
+                .ToList();
+
+            var referenceAmount = monthlyTreatments.Sum(t => t.Cost);
             currentSalary = doctor.CalculateSalary(referenceAmount);
         }
         else

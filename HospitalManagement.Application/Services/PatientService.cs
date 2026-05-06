@@ -120,7 +120,6 @@ public class PatientService : IPatientService
     }
 
 
-
     public async Task<Result<List<PatientListDto>>> GetAllAsync()
     {
         var patients = await _patientRepository.GetAllAsync();

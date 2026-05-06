@@ -19,7 +19,7 @@ public static class TreatmentJsonModelMapper
             NumberTreatment = treatment.NumberTreatment,
             StartDate = treatment.StartDate,
             Cost = treatment.Cost,
-            Type = treatment is TreatmentInternal ? "internal" : "external"
+            Type = treatment is TreatmentInternal ? "internal" : "external",
         };
 
         if (treatment is TreatmentInternal i)

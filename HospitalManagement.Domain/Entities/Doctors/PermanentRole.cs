@@ -7,7 +7,7 @@ public class PermanentRole : DoctorRole
     public override string RoleName => "permanent";
     public decimal BaseSalary { get;private set; }
 
-    private PermanentRole() { }
+    public PermanentRole() { }
 
     // constructor for creating
     public PermanentRole(DateTime startDate ,DateTime? endDate ,decimal baseSalary)

@@ -7,7 +7,7 @@ public class ExternalPatient : Patient  , IEntity
     public bool IsAdmitted { get;private set; } = false;
     public DateTime? AdmissionDate { get; private set; }
 
-    protected ExternalPatient() { }
+    public ExternalPatient() { }
 
     public ExternalPatient(
         string patientNumber,string name,

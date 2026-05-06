@@ -7,7 +7,7 @@ public class DoctorTreatment
     public Guid TreatmentId { get;private set; }
     public TreatmentRole RoleInTreatment { get;private set; }
 
-    protected DoctorTreatment() { }
+    public DoctorTreatment() { }
     public DoctorTreatment(Guid doctorId, Guid treatmentId, TreatmentRole role)
     {
         DoctorId = doctorId;
