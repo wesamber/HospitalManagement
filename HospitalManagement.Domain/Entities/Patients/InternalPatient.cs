@@ -19,7 +19,7 @@ public class InternalPatient : Patient , IEntity
         DateOnly? dateOfBirth,
         string? address,string? phone,
         string? email, Guid departmentId)
-        : base(patientNumber, name, dateOfBirth, address, phone, email)
+        : base(patientNumber, name, dateOfBirth, address, phone, email, type: "internal")
     {
         DepartmentId = departmentId;
     }
@@ -33,7 +33,7 @@ public class InternalPatient : Patient , IEntity
         IEnumerable<Guid>? internalTreatments, 
         IEnumerable<Guid>? externalTreatments)
         : base(id, patientNumber, name, dateOfBirth, address, phone, email, 
-              externalTreatments)
+              externalTreatments, type: "internal")
     {
         DepartmentId = departmentId;
 

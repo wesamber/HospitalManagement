@@ -13,7 +13,7 @@ public class ExternalPatient : Patient  , IEntity
         string patientNumber,string name,
         DateOnly? dateOfBirth,string? address,
         string? phone,string? email)
-        : base(patientNumber, name, dateOfBirth, address, phone, email)
+        : base(patientNumber, name, dateOfBirth, address, phone, email, type: "external")
     {
     }
 
@@ -22,7 +22,7 @@ public class ExternalPatient : Patient  , IEntity
         string? phone, string? email,
         IEnumerable<Guid>? externalTreatmentIds , bool isAdmitted,
         DateTime? admissionDate)
-        : base(patientId, patientNumber, name, dateOfBirth, address, phone, email , externalTreatmentIds)
+        : base(patientId, patientNumber, name, dateOfBirth, address, phone, email , externalTreatmentIds, type: "external")
     {
         IsAdmitted = isAdmitted;
         AdmissionDate = admissionDate;

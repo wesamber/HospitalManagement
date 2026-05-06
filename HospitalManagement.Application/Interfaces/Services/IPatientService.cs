@@ -8,11 +8,17 @@ using System.Threading.Tasks;
 
 namespace HospitalManagement.Application.Interfaces.Services;
 
-public interface IPatientService
+public interface IPatientService 
 {
-    Task<Result<PatientDto>> CreateAsync(CreatePatientDto dto);
-    Task<Result<bool>> UpdateAsync(UpdatePatientDto dto); 
-    Task<Result<bool>> DeleteAsync(Guid id);
-    Task<Result<PatientDto>> GetByIdAsync(Guid id);
+    // CRUD
+    Task<Result<InternalPatientDto>> CreateInternalAsync(CreatePatientInternalDto dto);
+    Task<Result<ExternalPatientDto>> CreateExternalAsync(CreatePatientExternalDto dto);
     Task<Result<List<PatientListDto>>> GetAllAsync();
+    Task<Result<object>> GetByIdAsync(Guid id); // بيرجع Internal أو External حسب النوع
+    Task<Result<bool>> UpdateAsync(UpdatePatientDto dto);
+    Task<Result<bool>> DeleteAsync(Guid id);
+
+    // Domain Actions
+    Task<Result<InternalPatientDto>> AdmitExternalPatientAsync(Guid patientId, Guid departmentId);
+    Task<Result<bool>> DischargeAsync(Guid patientId);
 }

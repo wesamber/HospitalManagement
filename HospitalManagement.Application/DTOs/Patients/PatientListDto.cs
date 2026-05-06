@@ -11,5 +11,5 @@ public class PatientListDto
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string PatientNumber { get; set; } = string.Empty;
-    public string PatientType { get; set; } = string.Empty; // Internal or External
+    public string Type { get; set; } = string.Empty; // Internal or External
 }

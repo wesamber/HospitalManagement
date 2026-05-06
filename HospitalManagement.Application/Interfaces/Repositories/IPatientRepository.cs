@@ -4,5 +4,9 @@ namespace HospitalManagement.Application.Interfaces.Repositories;
 
 public interface IPatientRepository : IRepository<Patient>
 {
-    Patient? GetByNumber(int patientNumber);
+    Task<Patient?> GetByNumberAsync(string patientNumber);
+    Task<bool> ExistsAsync(string name, DateOnly? dateOfBirth);
+    Task<IReadOnlyList<InternalPatient>> GetByDepartmentAsync(Guid departmentId);
+    Task<IReadOnlyList<Patient>> GetByTypeAsync(string type); // internal - external
 }
+
