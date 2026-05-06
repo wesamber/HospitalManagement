@@ -10,4 +10,5 @@ public class ExternalPatientDto : PatientDto
 {
     public bool IsAdmitted { get; set; }
     public DateTime? AdmissionDate { get; set; }
+    public List<PatientTreatmentDto> Treatments { get; set; } = new List<PatientTreatmentDto>();
 }

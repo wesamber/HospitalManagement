@@ -6,6 +6,7 @@ namespace HospitalManagement.Domain.Entities.Patients;
 public abstract class Patient : IEntity
 {
     public Guid Id { get; private set; }
+    public string? Type { get; protected set; }
     public string PatientNumber {  get; protected set; } = string.Empty;
     public string Name { get; protected set; } = string.Empty;
     public DateOnly? DateOfBirth { get;protected set; }
@@ -25,9 +26,11 @@ public abstract class Patient : IEntity
         string? address,
         string? phone,
         string? email,
-        IEnumerable<Guid>? treatmentIds=null)
+        IEnumerable<Guid>? treatmentIds=null,
+        string? type = null)
     {
         Id = id;
+        Type = type;
         PatientNumber = patientNumber;
         Name = name;
         DateOfBirth = dateOfBirth;
@@ -48,9 +51,10 @@ public abstract class Patient : IEntity
         DateOnly? dateOfBirth,
         string? address,
         string? phone,
-        string? email):
+        string? email,
+        string? type = null):
         this(Guid.NewGuid(), patientNumber, name,
-            dateOfBirth, address, phone, email , null)
+            dateOfBirth, address, phone, email , null, type)
     {
         // باني الانشاء عم يرث من باني اعادة التحميل مشان ما ولدد guid وكبو
     }

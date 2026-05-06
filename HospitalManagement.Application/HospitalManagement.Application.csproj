@@ -11,9 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Mappers\Patients\" />
     <Folder Include="Mappers\Treatments\" />
-    <Folder Include="Validators\Patients\" />
     <Folder Include="Validators\Treatments\" />
   </ItemGroup>
 
