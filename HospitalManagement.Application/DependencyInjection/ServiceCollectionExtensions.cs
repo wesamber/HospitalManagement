@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDoctorService, DoctorService>();
         services.AddScoped<IPatientService, PatientService>();
         services.AddScoped<ITreatmentService, TreatmentService>();
+        services.AddScoped<IDepartmentService, DepartmentService>();
 
         services.AddHostedService<TraineeSalaryUpdateWorker>();
 

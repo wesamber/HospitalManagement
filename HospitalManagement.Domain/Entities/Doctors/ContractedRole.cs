@@ -24,7 +24,14 @@ public class ContractedRole : DoctorRole
         : base( startDate , endDate)
     {
         Percent = percent;
-        ArchiveCurrentSalary(percent);
+    }
+
+    public void UpdatePercent(decimal percent)
+    {
+        if (percent <= 0m || percent > 1m)
+            throw new ArgumentOutOfRangeException(nameof(percent), "Percent must be between 0 and 1.");
+
+        Percent = percent;
     }
 
     public override decimal CalculateSalary(decimal totalTreatmentsCost)

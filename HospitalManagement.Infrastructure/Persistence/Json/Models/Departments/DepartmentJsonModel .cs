@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HospitalManagement.Infrastructure.Persistence.Json.Models.Department;
+namespace HospitalManagement.Infrastructure.Persistence.Json.Models.Departments;
 
 public class DepartmentJsonModel
 {

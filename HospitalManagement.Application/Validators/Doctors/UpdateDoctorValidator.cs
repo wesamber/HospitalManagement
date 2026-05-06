@@ -37,5 +37,11 @@ public class UpdateDoctorValidator : AbstractValidator<UpdateDoctorDto>
         RuleFor(x => x.Address)
             .MaximumLength(100).WithMessage("Address cannot exceed 100 characters.")
             .When(x => !string.IsNullOrEmpty(x.Address));
+
+        RuleFor(x => x.Percent)
+            .GreaterThan(0m)
+            .LessThanOrEqualTo(1m)
+            .WithMessage("Percent must be between 0 and 1.")
+            .When(x => x.Percent.HasValue);
     }
 }

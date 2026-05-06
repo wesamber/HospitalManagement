@@ -21,7 +21,7 @@ public class ExternalPatient : Patient  , IEntity
         DateOnly? dateOfBirth, string? address, 
         string? phone, string? email,
         IEnumerable<Guid>? externalTreatmentIds , bool isAdmitted,
-        DateTime admissionDate)
+        DateTime? admissionDate)
         : base(patientId, patientNumber, name, dateOfBirth, address, phone, email , externalTreatmentIds)
     {
         IsAdmitted = isAdmitted;

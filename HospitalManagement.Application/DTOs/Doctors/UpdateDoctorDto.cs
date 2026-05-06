@@ -18,4 +18,8 @@ public class UpdateDoctorDto
     public string? Address { get; set; }   
     public string? PhoneNumber { get; set; }   
     public string? Email { get; set; }
+
+    // optional: only used when the active role is contracted
+    // Percent is a ratio (0..1), e.g. 0.5 = 50%
+    public decimal? Percent { get; set; }
 }
