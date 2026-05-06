@@ -38,6 +38,14 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<ISerializer>()
             ));
 
+            services.AddScoped<IDepartmentRepository>(sp =>
+                new JsonDepartmentRepository(
+                    Path.Combine(AppContext.BaseDirectory, storageOption.JsonPaths.DepartmentsSnapshot),
+                    Path.Combine(AppContext.BaseDirectory, storageOption.JsonPaths.DepartmentsLog),
+                    sp.GetRequiredService<IFileStorage>(),
+                    sp.GetRequiredService<ISerializer>()
+                ));
+
             services.AddScoped<IPatientRepository>(sp =>
                 new JsonPatientRepository(
                     Path.Combine(AppContext.BaseDirectory, storageOption.JsonPaths.PatientsSnapshot),

@@ -24,32 +24,60 @@ public class Department : IEntity
     }
 
     public Department(
+        Guid id,
         string name , 
-        IEnumerable<InternalPatient> patients, 
-        IEnumerable<Doctor> doctors)
+        IEnumerable<Guid> patientIds, 
+        IEnumerable<Guid> doctorIds)
     {
-        Id = Guid.NewGuid();
+        Id = id;
         Name = name;
-        _patientIds.AddRange(patients.Select(p => p.Id));
-        _doctorIds.AddRange(doctors.Select(d => d.Id));
+        _patientIds.AddRange(patientIds);
+        _doctorIds.AddRange(doctorIds);
+    }
+
+    public void UpdateName(string name)
+    {
+        Name = name;
     }
 
     public void AdmitPatient(Guid patientId)
     {
-        if(!_patientIds.Contains(patientId))
-            _patientIds.Add(patientId);
+        if(_patientIds.Contains(patientId)) 
+            throw new InvalidOperationException($"Patient with ID {patientId} is already admitted in department '{Name}'.");
+
+        _patientIds.Add(patientId);
     }
 
-    //public void DischargePatient(Guid patientId , DateTime date)
-    //{
-    //    var patient = _patients.FirstOrDefault(p => p.Id == patientId);
-    //    if(patient is null)
-    //        throw new InvalidOperationException($"Patient with ID {patientId} not found in department '{Name}'.");
-    //    patient.Discharge(date);
-    //}
+    // في حال انتقل لقسم تاني او قبل التخريج 
+    // بينما فعل التخريج الاساسسي عند المريض 
+    public void RemovePatient(Guid patientId)
+    {
+        if(!_patientIds.Contains(patientId)) 
+            throw new InvalidOperationException($"Patient with ID {patientId} is not admitted in department '{Name}'.");
 
-    //public int CountPatientsInPeriod(DateTime from, DateTime to)
-    //     => _patients.Count(p =>
-    //    p.InternalTreatments.Any(t => t.DateStart >= from && t.DateStart     <= to));
-    
+        _patientIds.Remove(patientId);
+    }
+
+    public void AssignDoctor(Guid doctorId)
+    {
+        if (_doctorIds.Contains(doctorId))
+            throw new InvalidOperationException(
+                $"Doctor {doctorId} is already assigned to department '{Name}'.");
+        _doctorIds.Add(doctorId);
+    }
+
+    public void RemoveDoctor(Guid doctorId)
+    {
+        if (!_doctorIds.Contains(doctorId))
+            throw new InvalidOperationException(
+                $"Doctor {doctorId} is not in department '{Name}'.");
+        _doctorIds.Remove(doctorId);
+    }
+
+    internal void LoadPatientIds(IEnumerable<Guid> ids)
+        => _patientIds.AddRange(ids);
+
+    internal void LoadDoctorIds(IEnumerable<Guid> ids)
+        => _doctorIds.AddRange(ids);
+
 }
