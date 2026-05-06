@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HospitalManagement.Application.DTOs.Treatments;
+namespace HospitalManagement.Application.DTOs.Doctors;
 
 public class DoctorTreatmentDto
 {
-    public Guid DoctorId { get; set; }
+    public Guid TreatmentId { get; set; }
     public string TreatmentRole { get; set; } = string.Empty;
 }

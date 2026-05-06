@@ -9,9 +9,9 @@ namespace HospitalManagement.Application.DTOs.Treatments;
 
 public class CreateTreatmentInternalDto
 {
-    public DateTime StartDate { get; set; }
-    public decimal Cost { get; set; }
-    public Guid DepartmentId { get; set; }
     public Guid PatientId { get; set; }
-    public List<TreatmentDto> Doctors { get; set; } = new();
+    public Guid DepartmentId { get; set; }
+    public decimal Cost { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime DateDischarge { get; set; }
 }

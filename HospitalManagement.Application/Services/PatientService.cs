@@ -7,6 +7,7 @@ using HospitalManagement.Application.Interfaces.Repositories;
 using HospitalManagement.Application.Interfaces.Services;
 using HospitalManagement.Application.Mappers.Patients;
 using HospitalManagement.Domain.Entities.Patients;
+using HospitalManagement.Domain.Entities.Treatments;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,7 @@ public class PatientService : IPatientService
 {
 
     private readonly IPatientRepository _patientRepository;
+    private readonly ITreatmentRepository _treatmentRepository;
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IValidator<CreatePatientExternalDto> _createExternalValidator;
     private readonly IValidator<CreatePatientInternalDto> _createInternalValidator;
@@ -28,6 +30,7 @@ public class PatientService : IPatientService
 
     public PatientService(
         IPatientRepository patientRepository,
+        ITreatmentRepository treatmentRepository,
         IDepartmentRepository departmentRepository,
         IValidator<CreatePatientExternalDto> createExternalValidator,
         IValidator<CreatePatientInternalDto> createInternalValidator,
@@ -36,6 +39,7 @@ public class PatientService : IPatientService
         IMapper mapper)
     {
         _patientRepository = patientRepository;
+        _treatmentRepository = treatmentRepository;
         _departmentRepository = departmentRepository;
         _createExternalValidator = createExternalValidator;
         _createInternalValidator = createInternalValidator;
@@ -93,15 +97,29 @@ public class PatientService : IPatientService
         if (patient == null)
             return Result<object>.Failure("Patient not found.");
 
+        var allIds = new List<Guid>();
+        if (patient.ExternalTreatmentIds != null)
+            allIds.AddRange(patient.ExternalTreatmentIds);
+
+        if (patient is InternalPatient ip && ip.InternalTreatments != null)
+            allIds.AddRange(ip.InternalTreatments);
+
+        var treatments = await _treatmentRepository.GetByIdsAsync(allIds);
+
+        var internalTreatmentsDto = _mapper.Map<List<PatientTreatmentDto>>(treatments.OfType<TreatmentInternal>());
+        var externalTreatmentsDto = _mapper.Map<List<PatientTreatmentDto>>(treatments.OfType<TreatmentExternal>());
+
         object dto = patient switch
         {
-            InternalPatient i => _mapper.Map<InternalPatientDto>(i),
-            ExternalPatient e => _mapper.Map<ExternalPatientDto>(e),
-            _ => throw new InvalidOperationException("Unknown patient type.")
+            InternalPatient i => MapInternalPatient(i, internalTreatmentsDto, externalTreatmentsDto),
+            ExternalPatient e => MapExternalPatient(e, externalTreatmentsDto),
+            _ => throw new InvalidOperationException("Unknown patient type")
         };
 
         return Result<object>.SuccessResult(dto);
     }
+
+
 
     public async Task<Result<List<PatientListDto>>> GetAllAsync()
     {
@@ -189,4 +207,19 @@ public class PatientService : IPatientService
         return Result<bool>.SuccessResult(true);
     }
     #endregion
+
+    private InternalPatientDto MapInternalPatient(InternalPatient patient, List<PatientTreatmentDto> internalT, List<PatientTreatmentDto> externalT)
+    {
+        var mapped = _mapper.Map<InternalPatientDto>(patient);
+        mapped.InternalTreatments = internalT;
+        mapped.ExternalTreatments = externalT;
+        return mapped;
+    }
+
+    private ExternalPatientDto MapExternalPatient(ExternalPatient patient, List<PatientTreatmentDto> externalT)
+    {
+        var mapped = _mapper.Map<ExternalPatientDto>(patient);
+        mapped.ExternalTreatments = externalT;
+        return mapped;
+    }
 }

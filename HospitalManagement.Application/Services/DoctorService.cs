@@ -2,6 +2,7 @@
 using FluentValidation;
 using HospitalManagement.Application.Common;
 using HospitalManagement.Application.Common.Enums;
+using HospitalManagement.Application.DTOs.Departments;
 using HospitalManagement.Application.DTOs.Doctors;
 using HospitalManagement.Application.DTOs.Doctors.DoctorRoles;
 using HospitalManagement.Application.Interfaces.Repositories;
@@ -24,6 +25,7 @@ public class DoctorService : IDoctorService
 {
     private readonly IDoctorRepository _doctorRepository;
     private readonly ITreatmentRepository _treatmentRepository;
+    private readonly IDepartmentRepository _departmentRepository;
     private readonly IValidator<CreateDoctorDto> _createValidator;
     private readonly IValidator<UpdateDoctorDto> _updateValidator;
     private readonly IValidator<AddRoleDoctorDto> _addRoleValidator;
@@ -32,6 +34,7 @@ public class DoctorService : IDoctorService
     private readonly IMapper _mapper;
     public DoctorService(
         IDoctorRepository doctorRepository,
+        IDepartmentRepository departmentRepository,
         ITreatmentRepository treatmentRepository,
         IValidator<CreateDoctorDto> createValidator,
         IValidator<UpdateDoctorDto> updateValidator,
@@ -137,12 +140,27 @@ public class DoctorService : IDoctorService
     public async Task<Result<DoctorDetailsDto>> GetByIdAsync(Guid id)
     {
         var doctor = await _doctorRepository.GetByIdAsync(id);
-        if(doctor == null)
+        if (doctor == null)
             return Result<DoctorDetailsDto>.Failure("Doctor not found.");
 
-        var doctorDetailsDto = _mapper.Map<DoctorDetailsDto>(doctor);
+        var dto = _mapper.Map<DoctorDetailsDto>(doctor);
 
-        return Result<DoctorDetailsDto>.SuccessResult(doctorDetailsDto);
+        // جيب كائنات الأقسام
+        var departments = new List<DepartmentDoctorDto>();
+        foreach (var deptId in doctor.DepartmentsIds)
+        {
+            var dept = await _departmentRepository.GetByIdAsync(deptId);
+            if (dept != null)
+                departments.Add(new DepartmentDoctorDto
+                {
+                    Id = dept.Id,
+                    Name = dept.Name,
+                });
+        }
+
+        dto.Departments = departments;
+
+        return Result<DoctorDetailsDto>.SuccessResult(dto);
     }
 
     public async Task<Result<bool>> UpdateAsync(UpdateDoctorDto dto)
@@ -220,6 +238,13 @@ public class DoctorService : IDoctorService
         {
             return Result<bool>.Failure("Doctor not found.");
         }
+
+        var department = await _departmentRepository.GetByIdAsync(departmentId);
+        if(department == null)
+        {
+            return Result<bool>.Failure("Department not found.");
+        }
+
         doctor.AssignToDepartment(departmentId);
         await _doctorRepository.UpdateAsync(doctor);
         return Result<bool>.SuccessResult(true);

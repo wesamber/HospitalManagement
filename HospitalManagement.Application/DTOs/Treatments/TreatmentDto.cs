@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 
 namespace HospitalManagement.Application.DTOs.Treatments;
 
-public class TreatmentDto
+public class TreatmentListDto
 {
     public Guid Id { get; set; }
-    public DateTime StartDate { get; set; } 
-    public decimal Cost { get; set; } 
-
+    public string NumberTreatment { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty; // "internal" / "external"
+    public DateTime StartDate { get; set; }
+    public decimal Cost { get; set; }
+    public Guid PatientId { get; set; }
 }
