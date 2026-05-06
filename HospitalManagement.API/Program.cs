@@ -10,7 +10,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin() // أو حدد IP رفيقك للأمان
+        policy.AllowAnyOrigin() 
               .AllowAnyMethod()
               .AllowAnyHeader();
     });

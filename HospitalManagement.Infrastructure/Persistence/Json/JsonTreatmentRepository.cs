@@ -6,108 +6,83 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using HospitalManagement.Infrastructure.Persistence.Json.Models.Treatments;
 
 namespace HospitalManagement.Infrastructure.Persistence.Json;
 
-public class JsonTreatmentRepository : ITreatmentRepository
-    //JsonSnapshotLogRepository<Treatment>, ITreatmentRepository
+public class JsonTreatmentRepository : JsonSnapshotLogRepository<Treatment , TreatmentJsonModel>, ITreatmentRepository
 {
     public JsonTreatmentRepository(
-        string snapshotPath,
-        string logPath,
-        IFileStorage fileStorage,
-        ISerializer serializer) 
-        //: base(snapshotPath, logPath, fileStorage, serializer)
+       string snapshotPath,
+       string logPath,
+       IFileStorage fileStorage,
+       ISerializer serializer)
+       : base(
+           snapshotPath,
+           logPath,
+           fileStorage,
+           serializer,
+           t => t.ToJsonModel(),
+           m => m.ToDomain())
+    { }
+
+    public async Task<List<Treatment>> GetByPatientIdAsync(Guid patientId)
     {
+        var state = await GetAllAsync();
+        return state.Where(t => t switch
+        {
+            TreatmentInternal i => i.PatientId == patientId,
+            TreatmentExternal e => e.PatientId == patientId,
+            _ => false
+        }).ToList();
     }
 
-    public Task AddAsync(Treatment entity)
+    public async Task<List<Treatment>> GetByIdsAsync(IEnumerable<Guid> ids)
     {
-        throw new NotImplementedException();
+        var state = await GetAllAsync();
+        return state.Where(t => ids.Contains(t.Id)).ToList();
     }
 
-    public Task DeleteAsync(Treatment entity)
+    public async Task<Treatment?> GetByNumberAsync(string number)
     {
-        throw new NotImplementedException();
+        var state = await GetAllAsync();
+        return state.FirstOrDefault(t =>
+            t.NumberTreatment.Equals(number, StringComparison.OrdinalIgnoreCase));
     }
 
-    public Task<List<Treatment>> GetAllAsync()
+    public async Task<List<Treatment>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
     {
-        throw new NotImplementedException();
+        var state = await GetAllAsync();
+        return state.Where(t => t.StartDate >= startDate && t.StartDate <= endDate).ToList();
     }
 
-    public IReadOnlyList<Treatment> GetByDate(DateTime dateStart, DateTime dateEnd)
+    public async Task<List<Treatment>> GetByIdsAsync(List<Guid> treatmentIds)
     {
-        throw new NotImplementedException();
+        var state = await GetAllAsync();
+        return state.Where(t => treatmentIds.Contains(t.Id)).ToList();
     }
 
-    public Task<IList<Treatment>> GetByDoctorAndPeriodAsync(Guid doctorId, DateTime startDate, DateTime endDate)
+    public async Task<List<Treatment>> GetByDoctorAsync(Guid doctorId)
     {
-        throw new NotImplementedException();
+        var state = await GetAllAsync();
+        return state
+            .OfType<TreatmentInternal>()
+            .Where(t => t.Doctors.Any(d => d.DoctorId == doctorId))
+            .Cast<Treatment>()
+            .ToList();
     }
 
-    public Task<IList<Treatment>> GetByDoctorAsync(Guid doctorId)
+    public async Task<List<Treatment>> GetByDoctorAndPeriodAsync(
+    Guid doctorId, DateTime startDate, DateTime endDate)
     {
-        throw new NotImplementedException();
+        var state = await GetAllAsync();
+        return state
+            .OfType<TreatmentInternal>()
+            .Where(t =>
+                t.Doctors.Any(d => d.DoctorId == doctorId) &&
+                t.StartDate >= startDate &&
+                t.StartDate <= endDate)
+            .Cast<Treatment>()
+            .ToList();
     }
-
-    public Task<Treatment?> GetByIdAsync(Guid id)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<IList<Treatment>> GetByIdsAsync(List<Guid> treatmentIds)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task UpdateAsync(Treatment entity)
-    {
-        throw new NotImplementedException();
-    }
-
-    //public IReadOnlyList<Treatment> GetByDate(DateTime dateStart, DateTime dateEnd)
-    //{
-    //    var state = _cache ?? 
-    //        throw new InvalidOperationException("Repository is not initialized.");
-    //    return state.Where(t => t.StartDate >= dateStart && t.StartDate <= dateEnd).ToList();
-    //}
-
-    //public Task<IList<Treatment>> GetByIdsAsync(List<Guid> treatmentIds)
-    //{
-    //    var state = _cache ?? 
-    //        throw new InvalidOperationException("Repository is not initialized.");
-    //    var result = state.Where(t => treatmentIds.Contains(t.Id)).Cast<Treatment>().ToList();
-    //    return Task.FromResult<IList<Treatment>>(result);
-    //}
-
-    //public Task<IList<Treatment>> GetByDoctorAsync(Guid doctorId)
-    //{
-    //    var state = _cache ?? 
-    //        throw new InvalidOperationException("Repository is not initialized.");
-
-    //    // For TreatmentInternal, check the Doctors collection
-    //    var internalTreatments = state.OfType<TreatmentInternal>()
-    //        .Where(t => t.Doctors.Any(d => d.DoctorId == doctorId))
-    //        .Cast<Treatment>()
-    //        .ToList();
-
-    //    return Task.FromResult<IList<Treatment>>(internalTreatments);
-    //}
-
-    //public Task<IList<Treatment>> GetByDoctorAndPeriodAsync(Guid doctorId, DateTime startDate, DateTime endDate)
-    //{
-    //    var state = _cache ?? 
-    //        throw new InvalidOperationException("Repository is not initialized.");
-
-    //    // For TreatmentInternal, check the Doctors collection and date range
-    //    var result = state.OfType<TreatmentInternal>()
-    //        .Where(t => t.Doctors.Any(d => d.DoctorId == doctorId) && 
-    //                    t.StartDate >= startDate && 
-    //                    t.StartDate <= endDate)
-    //        .Cast<Treatment>()
-    //        .ToList();
-
-    //    return Task.FromResult<IList<Treatment>>(result);
-    //}
 }
