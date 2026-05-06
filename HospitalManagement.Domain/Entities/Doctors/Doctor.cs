@@ -26,7 +26,7 @@ public class Doctor : IEntity
 
     public DoctorRole? ActiveRole => _roles?.FirstOrDefault(r => r.IsActive);
 
-    protected Doctor() { }
+    public Doctor() { }
 
     // constructor for loading 
     public Doctor(

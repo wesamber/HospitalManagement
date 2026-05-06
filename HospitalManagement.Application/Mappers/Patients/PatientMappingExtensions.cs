@@ -45,6 +45,8 @@ public static class PatientMappingExtensions
             email: externalPatient.Email,
             departmentId: departmentId,
             externalTreatments: externalPatient.ExternalTreatmentIds,
-            internalTreatments: null);
+            internalTreatments: null,
+            isDischarged: false,
+            dischargeDate: null);
     }
 }

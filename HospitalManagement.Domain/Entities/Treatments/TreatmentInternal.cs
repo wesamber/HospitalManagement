@@ -12,7 +12,7 @@ public class TreatmentInternal : Treatment , IEntity
 
     private readonly List<DoctorTreatment> _doctors = new();
     public IReadOnlyList<DoctorTreatment> Doctors => _doctors.AsReadOnly();
-    private TreatmentInternal() { }
+    public TreatmentInternal() { }
 
     // for loading
     public TreatmentInternal(

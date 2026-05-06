@@ -18,7 +18,7 @@ public abstract class Patient : IEntity
     public IReadOnlyList<Guid> ExternalTreatmentIds => _externalTreatmentIds.AsReadOnly();
 
     // constructor for loading existing patients
-    protected Patient() { }
+    public Patient() { }
     protected Patient(Guid id,
         string patientNumber,
         string name,

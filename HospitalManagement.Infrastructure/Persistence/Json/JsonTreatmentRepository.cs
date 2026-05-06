@@ -76,13 +76,15 @@ public class JsonTreatmentRepository : JsonSnapshotLogRepository<Treatment , Tre
     Guid doctorId, DateTime startDate, DateTime endDate)
     {
         var state = await GetAllAsync();
-        return state
+
+        var internal_ = state
             .OfType<TreatmentInternal>()
             .Where(t =>
                 t.Doctors.Any(d => d.DoctorId == doctorId) &&
                 t.StartDate >= startDate &&
                 t.StartDate <= endDate)
-            .Cast<Treatment>()
-            .ToList();
+            .Cast<Treatment>();
+
+        return internal_.ToList();
     }
 }

@@ -15,7 +15,7 @@ public class Department : IEntity
     private readonly List<Guid> _doctorIds = new();
     public IReadOnlyList<Guid> DoctorIds => _doctorIds.AsReadOnly();
 
-    private Department() { }
+    public Department() { }
     // For creating new department with just a name
     public Department(string name)
     {

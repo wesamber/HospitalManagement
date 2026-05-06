@@ -55,7 +55,9 @@ public static class PatientJsonModelMapper
                 email: model.Email,
                 departmentId: model.DepartmentId!.Value,
                 internalTreatments: model.InternalTreatmentIds,
-                externalTreatments: model.ExternalTreatmentIds);
+                externalTreatments: model.ExternalTreatmentIds,
+                isDischarged: model.IsDischarged,
+                dischargeDate: model.DischargeDate);
 
             return patient;
         }

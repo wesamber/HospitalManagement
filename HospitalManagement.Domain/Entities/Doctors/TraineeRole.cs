@@ -6,7 +6,7 @@ public class TraineeRole : DoctorRole
 {
     public override string RoleName => "trainee";
 
-    private TraineeRole() { }
+    public TraineeRole() { }
 
     // constructor for creating
     public TraineeRole(DateTime startDate , DateTime? endDate , bool isActive = true)

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using HospitalManagement.Application.Common;
 using HospitalManagement.Application.Common.Enums;
 using HospitalManagement.Application.DTOs.Treatments;
@@ -6,6 +7,7 @@ using HospitalManagement.Application.Interfaces.Repositories;
 using HospitalManagement.Application.Interfaces.Services;
 using HospitalManagement.Application.Mappers.Treatments;
 using HospitalManagement.Domain.Entities.Doctors;
+using HospitalManagement.Domain.Entities.Enums;
 using HospitalManagement.Domain.Entities.Patients;
 using HospitalManagement.Domain.Entities.Treatments;
 using System;
@@ -20,6 +22,7 @@ public class TreatmentService : ITreatmentService
 {
     private readonly IDepartmentRepository _departmentRepository;
     private readonly ITreatmentRepository _treatmentRepository;
+    private readonly IValidator<AssignDoctorDto> _validator;
     private readonly IPatientRepository _patientRepository;
     private readonly IDoctorRepository _doctorRepository;
     private readonly INumberGenerator _numberGenerator;
@@ -28,6 +31,7 @@ public class TreatmentService : ITreatmentService
     public TreatmentService(
         IDepartmentRepository departmentRepository,
         ITreatmentRepository treatmentRepository,
+        IValidator<AssignDoctorDto> validator,
         IPatientRepository patientRepository,
         IDoctorRepository doctorRepository,
         INumberGenerator numberGenerator,
@@ -38,6 +42,7 @@ public class TreatmentService : ITreatmentService
         _patientRepository = patientRepository;
         _doctorRepository = doctorRepository;
         _numberGenerator = numberGenerator;
+        _validator = validator;
         _mapper = mapper;
     }
 
@@ -118,6 +123,10 @@ public class TreatmentService : ITreatmentService
 
     public async Task<Result<bool>> AssignDoctorAsync(AssignDoctorDto dto)
     {
+        var validation = await _validator.ValidateAsync(dto);
+        if (!validation.IsValid)
+            return Result<bool>.Failure(validation.Errors.First().ErrorMessage);
+
         var treatment = await _treatmentRepository.GetByIdAsync(dto.TreatmentId);
         if (treatment == null)
             return Result<bool>.Failure("Treatment not found.");
@@ -129,7 +138,7 @@ public class TreatmentService : ITreatmentService
         if (doctor == null)
             return Result<bool>.Failure("Doctor not found.");
 
-        var doctorTreatment = new DoctorTreatment(dto.DoctorId, dto.TreatmentId, dto.Role);
+        var doctorTreatment = new DoctorTreatment(dto.DoctorId, dto.TreatmentId, Enum.TryParse<TreatmentRole>(dto.RoleInTreatment, ignoreCase: true, out var role) ? role : throw new InvalidOperationException());
 
         // ربط بالمعالجة
         internalTreatment.AddDoctor(doctorTreatment);
