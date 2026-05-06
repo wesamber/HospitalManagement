@@ -59,4 +59,9 @@ public class InternalPatient : Patient , IEntity
         DischargeDate = dischargeDate; 
     }
 
+    internal void LoadInternalTreatment(Guid treatmentId)
+    {
+        _internalTreatments.Add(treatmentId);
+    }
+
 }

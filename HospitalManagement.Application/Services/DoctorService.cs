@@ -166,6 +166,15 @@ public class DoctorService : IDoctorService
         }
         // Update doctor properties
         doctor.UpdateInfo(dto.Name,specialization, dto.DateOfBirth, dto.Address, dto.PhoneNumber, dto.Email);
+
+        if (dto.Percent.HasValue)
+        {
+            if (doctor.ActiveRole is not ContractedRole contractedRole)
+                return Result<bool>.Failure("Percent can only be updated for contracted doctors.");
+
+            contractedRole.UpdatePercent(dto.Percent.Value);
+        }
+
         await _doctorRepository.UpdateAsync(doctor);
 
         return Result<bool>.SuccessResult(true);

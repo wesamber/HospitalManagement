@@ -55,9 +55,24 @@ public abstract class Patient : IEntity
         // باني الانشاء عم يرث من باني اعادة التحميل مشان ما ولدد guid وكبو
     }
 
+    public void UpdateInfo(string name , DateOnly? dateOfBirth , 
+        string? address , string? phone , string? email)
+    {
+        Name = name;
+        DateOfBirth = dateOfBirth;
+        Address = address;
+        PhoneNumber = phone;
+        Email = email;
+    }
+
     public void AddExternalTreatment(TreatmentExternal treatment)
     {
         if (treatment != null && !_externalTreatmentIds.Contains(treatment.Id))
             _externalTreatmentIds.Add(treatment.Id);
+    }
+
+    internal void LoadExternalTreatmentIds(IEnumerable<Guid> treatmentIds)
+    {
+        _externalTreatmentIds.AddRange(treatmentIds);
     }
 }
