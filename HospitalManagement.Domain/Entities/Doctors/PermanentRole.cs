@@ -21,7 +21,6 @@ public class PermanentRole : DoctorRole
         : base(id, startDate , endDate , isActive)
     {
         BaseSalary = baseSalary;
-        ArchiveCurrentSalary(baseSalary);
     }
     private int YearsAsPermanent()
     {

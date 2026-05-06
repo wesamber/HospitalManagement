@@ -77,7 +77,7 @@ public static class DoctorJsonModelMapper
             SalaryHistory = role.SalaryHistory
                 .Select(s => new SalaryRecordJsonModel
                 {
-                    RecordedAt = s.Date,
+                    RecordedAt = new DateTime(s.Year, s.Month, 1),
                     Amount = s.Amount
                 })
                 .ToList()
@@ -122,8 +122,19 @@ public static class DoctorJsonModelMapper
             _ => throw new ArgumentException($"Unknown doctor role type '{model.RoleType}'.", nameof(model))
         };
 
-            foreach(var salary in model.SalaryHistory)
-                role.LoadSalaryRecord(new SalaryRecord(salary.RecordedAt, salary.Amount));
+        foreach(var salary in model.SalaryHistory)
+        {
+            // Migration/cleanup: older data used to store the contracted Percent (0..1) into SalaryHistory.
+            // SalaryHistory now stores only monetary amounts, so we ignore those old percentage entries.
+            if (role is ContractedRole)
+            {
+                var percent = model.Percent ?? 0.5m;
+                if (salary.Amount == percent || (salary.Amount > 0m && salary.Amount < 1m))
+                    continue;
+            }
+
+            role.LoadSalaryRecord(new SalaryRecord(salary.RecordedAt.Year, salary.RecordedAt.Month, salary.Amount));
+        }
 
         return role;
     }

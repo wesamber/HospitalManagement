@@ -44,8 +44,15 @@ public abstract class DoctorRole : IEntity
 
     public void ArchiveCurrentSalary(decimal amount)
     {
-        _salaryHistory.Add(new SalaryRecord(DateTime.Now, amount));
+        var now = DateTime.Now;
+        _salaryHistory.Add(new SalaryRecord(now.Year, now.Month, amount));
     }
+
+    public SalaryRecord? GetSalaryForMonth(int year, int month)
+    {
+        return _salaryHistory.FirstOrDefault(s => s.Year == year && s.Month == month);
+    }
+
     public abstract decimal CalculateSalary(decimal referenceAmount);
 
     // هي للنخزين بدون معالجة الملفات بس اضافة
