@@ -148,12 +148,12 @@ public class DoctorService : IDoctorService
         var dto = _mapper.Map<DoctorDetailsDto>(doctor);
 
         // جيب كائنات الأقسام
-        var departments = new List<DepartmentDoctorDto>();
+        var departments = new List<DepartmentDto>();
         foreach (var deptId in doctor.DepartmentsIds)
         {
             var dept = await _departmentRepository.GetByIdAsync(deptId);
             if (dept != null)
-                departments.Add(new DepartmentDoctorDto
+                departments.Add(new DepartmentDto
                 {
                     Id = dept.Id,
                     Name = dept.Name,

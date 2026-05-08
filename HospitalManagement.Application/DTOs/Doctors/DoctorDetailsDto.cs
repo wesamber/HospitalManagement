@@ -26,6 +26,6 @@ public class DoctorDetailsDto
 
     public string? ActiveRole { get; set; }
     public List<DoctorRoleDto> Roles { get; set; } = new();
-    public List<DepartmentDoctorDto> Departments { get; set; } = new();
+    public List<DepartmentDto> Departments { get; set; } = new();
     public List<DoctorTreatmentDto> Treatments { get; set; } = new();
 }
