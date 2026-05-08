@@ -28,12 +28,24 @@ public class DoctorProfile : Profile
                 opt => opt.MapFrom(src => src.Specialization.ToString()))
             .ForMember(d => d.ActiveRole,
                 opt => opt.MapFrom(src => src.ActiveRole != null ? src.ActiveRole.RoleName : null))
+            .ForMember(d => d.ActiveRolePercent,
+               opt => opt.Ignore()) // رح نضبطها بعدين
+            .ForMember(d => d.ActiveRoleBaseSalary 
+              , opt => opt.Ignore()) // رح نضبطها بعدين
             .ForMember(d => d.Roles,
                 opt => opt.MapFrom(src => src.Roles))
             .ForMember(d => d.Treatments,
                 opt => opt.MapFrom(src => src.Treatments))
             .ForMember(d => d.Departments,
-                opt => opt.Ignore());
+                opt => opt.Ignore())
+            .AfterMap((src, dest) =>
+            {
+                if (src.ActiveRole is ContractedRole c)
+                    dest.ActiveRolePercent = c.Percent;
+                if (src.ActiveRole is PermanentRole p)
+                    dest.ActiveRoleBaseSalary = p.BaseSalary;
+            });
+
 
         CreateMap<DoctorTreatment, DTOs.Doctors.DoctorTreatmentDto>()
             .ForMember(d => d.TreatmentRole,
@@ -52,7 +64,11 @@ public class DoctorProfile : Profile
             .IncludeBase<DoctorRole, DoctorRoleDto>();
 
         CreateMap<ContractedRole, ContractRoleDto>()
-            .IncludeBase<DoctorRole, DoctorRoleDto>();
+            .IncludeBase<DoctorRole, DoctorRoleDto>()
+            .ForMember(d => d.Percent ,
+                opt => opt.MapFrom(src => src.Percent))
+            .ForMember(d => d.TreatmentIds , 
+                opt => opt.MapFrom(src => src.TreatmentIds.ToList()));
 
         CreateMap<DoctorTreatment, DTOs.Treatments.DoctorTreatmentDto>()
            .ForMember(d => d.TreatmentRole,

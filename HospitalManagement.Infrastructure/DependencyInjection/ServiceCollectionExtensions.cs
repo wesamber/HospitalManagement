@@ -1,7 +1,9 @@
-﻿using HospitalManagement.Application.Interfaces.Repositories;
+﻿using HospitalManagement.Application.Interfaces.Persistence;
+using HospitalManagement.Application.Interfaces.Repositories;
 using HospitalManagement.Application.Interfaces.Services;
 using HospitalManagement.Application.Services;
 using HospitalManagement.Infrastructure.Configuration;
+using HospitalManagement.Infrastructure.Persistence.Ado;
 using HospitalManagement.Infrastructure.Persistence.Json;
 using HospitalManagement.Infrastructure.Serialization;
 using HospitalManagement.Infrastructure.Services;
@@ -73,12 +75,15 @@ public static class ServiceCollectionExtensions
         }
         else if(storageOption.ActiveProvider == "Database")
         {
-            // هون الحقن الريبو تبعات الداتا بيز
-            // 4. هنا نضع ريبو الأدو (ADO.NET)
-            //// سنمرر الـ ConnectionString من ملف الإعدادات
-            //var connectionString = storageOptions.ConnectionStrings.DefaultConnection;
+            //هون الحقن الريبو تبعات الداتا بيز
 
-            //services.AddScoped<IDoctorRepository>(sp => new SqlDoctorRepository(connectionString));
+            //4.هنا نضع ريبو الأدو(ADO.NET)
+            // سنمرر الـ ConnectionString من ملف الإعدادات
+            var connectionString = storageOption.ConnectionStrings.DefaultConnection;
+            services.AddSingleton<ISqlConnectionFactory>(
+                _ => new SqlConnectionFactory(
+                configuration.GetConnectionString("HospitalDb")!));
+            services.AddScoped<IDoctorRepository>(sp => new AdoDoctorRepository(connectionString));
             //services.AddScoped<IPatientRepository>(sp => new SqlPatientRepository(connectionString));
             //services.AddScoped<ITreatmentRepository>(sp => new SqlTreatmentRepository(connectionString));
         }
