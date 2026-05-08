@@ -8,7 +8,6 @@ public class TreatmentInternal : Treatment , IEntity
 {
     public DateTime? DateDischarge { get;private set; }
     public Guid DepartmentId { get;private set; }
-    public Guid PatientId { get;private set; } 
 
     private readonly List<DoctorTreatment> _doctors = new();
     public IReadOnlyList<DoctorTreatment> Doctors => _doctors.AsReadOnly();
@@ -18,22 +17,20 @@ public class TreatmentInternal : Treatment , IEntity
     public TreatmentInternal(
         Guid id, string numberTreatment, DateTime datestart, decimal cost,
         DateTime dateDicharge , Guid departmentId, Guid patientId)
-        : base(id, numberTreatment, datestart, cost)
+        : base(id, numberTreatment, datestart, cost, patientId)
     {
         DateDischarge = dateDicharge;
         DepartmentId = departmentId;
-        PatientId = patientId;
     }
 
     // for creating
     public TreatmentInternal(
         string numberTreatment, DateTime datestart, decimal cost,
         DateTime dateDicharge, Guid departmentId, Guid patientId)
-        : base(numberTreatment, datestart, cost)
+        : base(numberTreatment, datestart, cost , patientId)
     {
         DateDischarge = dateDicharge;
         DepartmentId = departmentId;
-        PatientId = patientId;
     }
 
     public void AddDoctor(DoctorTreatment doctorTreatment)

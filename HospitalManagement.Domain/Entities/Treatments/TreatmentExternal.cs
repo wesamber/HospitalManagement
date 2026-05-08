@@ -4,7 +4,6 @@ public class TreatmentExternal : Treatment
 {
     public string ClinicNumber { get;private set; } = string.Empty;
     public string DoctorName { get;private set; } = string.Empty;
-    public Guid PatientId { get;private set; }
 
     public TreatmentExternal() { }
 
@@ -13,11 +12,10 @@ public class TreatmentExternal : Treatment
         Guid id, string numberTreatment, DateTime startDate, decimal cost,
         string clinicNumber, string doctorName,
         Guid patientId)
-        : base(id, numberTreatment, startDate, cost)
+        : base(id, numberTreatment, startDate, cost , patientId)
     {
         ClinicNumber = clinicNumber;
         DoctorName = doctorName;
-        PatientId = patientId;
     }
 
     //constructor for creating
@@ -25,10 +23,9 @@ public class TreatmentExternal : Treatment
         string numberTreatment, DateTime startDate, decimal cost,
         string clinicNumber, string doctorName,
         Guid patientId)
-        : base(numberTreatment, startDate, cost)
+        : base(numberTreatment, startDate, cost , patientId)
     {
         ClinicNumber = clinicNumber;
         DoctorName = doctorName;
-        PatientId = patientId;
     }
 }
