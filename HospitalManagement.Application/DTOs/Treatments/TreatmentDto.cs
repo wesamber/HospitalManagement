@@ -10,6 +10,7 @@ public class TreatmentListDto
 {
     public Guid Id { get; set; }
     public string NumberTreatment { get; set; } = string.Empty;
+    public string Name { get; set;  } = string.Empty;
     public string Type { get; set; } = string.Empty; // "internal" / "external"
     public DateTime StartDate { get; set; }
     public decimal Cost { get; set; }

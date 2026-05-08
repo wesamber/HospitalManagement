@@ -15,8 +15,6 @@ public abstract class AdoBase
     {
         _connectionString = connectionString;
     }
-
-    // كل Repository بستخدمه لفتح connection
     protected SqlConnection CreateConnection()
         => new SqlConnection(_connectionString);
 }

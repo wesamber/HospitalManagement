@@ -15,9 +15,9 @@ public class TreatmentInternal : Treatment , IEntity
 
     // for loading
     public TreatmentInternal(
-        Guid id, string numberTreatment, DateTime datestart, decimal cost,
+        Guid id, string numberTreatment, string name ,DateTime datestart, decimal cost,
         DateTime dateDicharge , Guid departmentId, Guid patientId)
-        : base(id, numberTreatment, datestart, cost, patientId)
+        : base(id, numberTreatment, name, datestart, cost, patientId)
     {
         DateDischarge = dateDicharge;
         DepartmentId = departmentId;
@@ -25,9 +25,9 @@ public class TreatmentInternal : Treatment , IEntity
 
     // for creating
     public TreatmentInternal(
-        string numberTreatment, DateTime datestart, decimal cost,
+        string numberTreatment, string name, DateTime datestart, decimal cost,
         DateTime dateDicharge, Guid departmentId, Guid patientId)
-        : base(numberTreatment, datestart, cost , patientId)
+        : base(numberTreatment, name, datestart, cost , patientId)
     {
         DateDischarge = dateDicharge;
         DepartmentId = departmentId;

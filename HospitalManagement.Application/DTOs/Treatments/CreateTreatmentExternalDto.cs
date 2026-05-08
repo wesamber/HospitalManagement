@@ -8,6 +8,7 @@ namespace HospitalManagement.Application.DTOs.Treatments;
 
 public class CreateTreatmentExternalDto
 {
+    public string Name { get; set; } = string.Empty;    
     public Guid PatientId { get; set; }
     public decimal Cost { get; set; }
     public DateTime StartDate { get; set; }
