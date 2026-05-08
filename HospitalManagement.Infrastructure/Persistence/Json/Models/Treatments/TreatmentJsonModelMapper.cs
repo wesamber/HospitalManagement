@@ -17,6 +17,7 @@ public static class TreatmentJsonModelMapper
         {
             Id = treatment.Id,
             NumberTreatment = treatment.NumberTreatment,
+            Name = treatment.Name,
             StartDate = treatment.StartDate,
             Cost = treatment.Cost,
             Type = treatment is TreatmentInternal ? "internal" : "external",
@@ -52,6 +53,7 @@ public static class TreatmentJsonModelMapper
             var treatment = new TreatmentInternal(
                 id: model.Id,
                 numberTreatment: model.NumberTreatment,
+                name: model.Name,
                 datestart: model.StartDate,
                 cost: model.Cost,
                 dateDicharge: model.DateDischarge ?? DateTime.MinValue,
@@ -71,6 +73,7 @@ public static class TreatmentJsonModelMapper
             return new TreatmentExternal(
                 id: model.Id,
                 numberTreatment: model.NumberTreatment,
+                name: model.Name,
                 startDate: model.StartDate,
                 cost: model.Cost,
                 clinicNumber: model.ClinicNumber!,

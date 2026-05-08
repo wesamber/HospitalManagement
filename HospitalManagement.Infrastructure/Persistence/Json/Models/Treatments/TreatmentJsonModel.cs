@@ -10,11 +10,12 @@ namespace HospitalManagement.Infrastructure.Persistence.Json.Models.Treatments;
 public class TreatmentJsonModel
 {
     public Guid Id { get; set; }
-    public string Type { get; set; } = string.Empty;
     public string NumberTreatment { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public decimal Cost { get; set; }
     public Guid PatientId { get; set; }
+    public string Type { get; set; } = string.Empty;
 
     // Internal only
     public DateTime? DateDischarge { get; set; }

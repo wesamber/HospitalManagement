@@ -9,10 +9,10 @@ public class TreatmentExternal : Treatment
 
     // constructor for loading
     public TreatmentExternal(
-        Guid id, string numberTreatment, DateTime startDate, decimal cost,
+        Guid id, string numberTreatment,string name, DateTime startDate, decimal cost,
         string clinicNumber, string doctorName,
         Guid patientId)
-        : base(id, numberTreatment, startDate, cost , patientId)
+        : base(id,numberTreatment,name, startDate, cost , patientId)
     {
         ClinicNumber = clinicNumber;
         DoctorName = doctorName;
@@ -20,10 +20,10 @@ public class TreatmentExternal : Treatment
 
     //constructor for creating
     public TreatmentExternal(
-        string numberTreatment, DateTime startDate, decimal cost,
+        string numberTreatment,string name ,DateTime startDate, decimal cost,
         string clinicNumber, string doctorName,
         Guid patientId)
-        : base(numberTreatment, startDate, cost , patientId)
+        : base(numberTreatment,name ,startDate, cost , patientId)
     {
         ClinicNumber = clinicNumber;
         DoctorName = doctorName;

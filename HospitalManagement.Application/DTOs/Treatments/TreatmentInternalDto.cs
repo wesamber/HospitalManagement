@@ -11,4 +11,4 @@ public class TreatmentInternalDto : TreatmentListDto
     public DateTime? DateDischarge { get; set; }
     public Guid DepartmentId { get; set; }
     public List<DoctorTreatmentDto> Doctors { get; set; } = new();
-}
+} 

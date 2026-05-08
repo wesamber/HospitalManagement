@@ -15,6 +15,7 @@ public static class TreatmentMappingExtensions
     {
         return new TreatmentInternal(
             numberTreatment: number,
+            name: dto.Name,
             datestart: dto.StartDate,
             cost: dto.Cost,
             dateDicharge: dto.DateDischarge,
@@ -26,6 +27,7 @@ public static class TreatmentMappingExtensions
     {
         return new TreatmentExternal(
             numberTreatment: number,
+            name: dto.Name,
             startDate: dto.StartDate,
             cost: dto.Cost,
             clinicNumber: dto.ClinicNumber,

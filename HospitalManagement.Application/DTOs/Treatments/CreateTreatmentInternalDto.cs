@@ -9,6 +9,7 @@ namespace HospitalManagement.Application.DTOs.Treatments;
 
 public class CreateTreatmentInternalDto
 {
+    public string Name { get; set; } = string.Empty;
     public Guid PatientId { get; set; }
     public Guid DepartmentId { get; set; }
     public decimal Cost { get; set; }
