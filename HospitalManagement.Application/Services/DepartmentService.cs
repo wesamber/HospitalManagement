@@ -126,8 +126,14 @@ public class DepartmentService : IDepartmentService
         if (department == null)
             return Result<bool>.Failure("Department not found.");
 
+        var doc = await _doctorRepository.GetByIdAsync(doctorId);
+        if(doc == null)
+            return Result<bool>.Failure("Doctor not found.");
+
         department.AssignDoctor(doctorId);
         await _departmentRepository.UpdateAsync(department);
+        doc.AssignToDepartment(departmentId);
+        await _doctorRepository.UpdateAsync(doc);
         return Result<bool>.SuccessResult(true);
     }
 
