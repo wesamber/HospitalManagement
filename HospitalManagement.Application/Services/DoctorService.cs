@@ -472,31 +472,22 @@ public class DoctorService : IDoctorService
     {
         var doctors = await _doctorRepository.GetAllAsync();
         var config = await _configRepository.GetAsync();
-        bool changed = false;
 
         foreach (var doctor in doctors)
         {
-            // إذا كان الدور الحالي متدرباً ونشطاً
-            if (doctor.ActiveRole is TraineeRole trainee)
-            {
-                var currentCalculatedSalary = trainee.CalculateSalary(config.BaseSalary);
+            if (doctor.ActiveRole is not TraineeRole trainee)
+                continue;
 
-                // جلب آخر راتب تم أرشفته لهذا الدور
-                var lastArchivedSalary = trainee.SalaryHistory.LastOrDefault()?.Amount;
+            var currentSalary = trainee.CalculateSalary(config.BaseSalary);
+            var lastArchivedSalary = trainee.SalaryHistory.LastOrDefault()?.Amount;
 
-                // إذا اختلف الراتب (بسبب زيادة سنوات الخدمة أو تغير الراتب الأساسي في Config)
-                if (lastArchivedSalary != currentCalculatedSalary)
-                {
-                    trainee.ArchiveCurrentSalary(currentCalculatedSalary);
-                    changed = true;
-                }
-            }
-        }
+            if (lastArchivedSalary == currentSalary)
+                continue;
 
-        if (changed)
-        {
-            foreach (var doc in doctors)
-                await _doctorRepository.UpdateAsync(doc);
+            trainee.ArchiveCurrentSalary(currentSalary);
+
+            // ← بدل UpdateAsync(doctor) الكامل
+            await _doctorRepository.UpdateSalaryHistoryAsync(doctor);
         }
     }
     #endregion

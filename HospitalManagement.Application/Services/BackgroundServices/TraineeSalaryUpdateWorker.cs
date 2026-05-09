@@ -31,7 +31,7 @@ public class TraineeSalaryUpdateWorker : BackgroundService
                 
             }
 
-            await Task.Delay(_checkInterval, stoppingToken);
+             await Task.Delay(_checkInterval, stoppingToken);
         }
     }
 }

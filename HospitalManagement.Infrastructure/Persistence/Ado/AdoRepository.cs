@@ -1,4 +1,5 @@
 ﻿using HospitalManagement.Application.Interfaces.Persistence;
+using HospitalManagement.Domain.Contracts;
 using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace HospitalManagement.Infrastructure.Persistence.Ado;
 
-public abstract class AdoRepository<T> where T : class
+public abstract class AdoRepository<T> where T : class , IEntity
 {
     protected readonly ISqlConnectionFactory _connectionFactory;
 

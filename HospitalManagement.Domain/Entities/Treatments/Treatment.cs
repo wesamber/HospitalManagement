@@ -26,7 +26,7 @@ public abstract class Treatment : IEntity
 
     // constructor for creating 
     protected Treatment(string numberTreatment,string name ,DateTime startDate, decimal cost , Guid patientId)
-        : this(Guid.NewGuid(),name ,numberTreatment, startDate, cost, patientId)
+        : this(Guid.NewGuid(),numberTreatment,name, startDate, cost, patientId)
     {   }
 
 }

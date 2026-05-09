@@ -76,19 +76,18 @@ public static class ServiceCollectionExtensions
         else if(storageOption.ActiveProvider == "Database")
         {
             //هون الحقن الريبو تبعات الداتا بيز
-
-            //4.هنا نضع ريبو الأدو(ADO.NET)
-            // سنمرر الـ ConnectionString من ملف الإعدادات
             var connectionString = storageOption.ConnectionStrings.DefaultConnection;
-            services.AddSingleton<ISqlConnectionFactory>(
-                _ => new SqlConnectionFactory(
-                configuration.GetConnectionString("HospitalDb")!));
-            services.AddScoped<IDoctorRepository>(sp => new AdoDoctorRepository(connectionString));
-            //services.AddScoped<IPatientRepository>(sp => new SqlPatientRepository(connectionString));
-            //services.AddScoped<ITreatmentRepository>(sp => new SqlTreatmentRepository(connectionString));
+
+            services.AddScoped<ISqlConnectionFactory>(sp =>
+                new SqlConnectionFactory(connectionString));
+
+            services.AddScoped<ISystemConfigRepository, AdoSystemConfigRepository>();
+            services.AddScoped<IDoctorRepository, AdoDoctorRepository>();
+            services.AddScoped<IDepartmentRepository, AdoDepartmentRepository>();
+            services.AddScoped<IPatientRepository, AdoPatientRepository>();
+            services.AddScoped<ITreatmentRepository, AdoTreatmentRepository>();
         }
 
-        // هون كمان بدي ضيف الانترفيسات تبع الريبو تبع  الادو
         return services;
     }
 }
