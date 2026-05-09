@@ -86,4 +86,9 @@ public class JsonDoctorRepository : JsonSnapshotLogRepository<Doctor , DoctorJso
             _lock.Release();
         }
     }
+
+    public async Task UpdateSalaryHistoryAsync(Doctor doctor)
+    {
+        await UpdateAsync(doctor);
+    }
 }

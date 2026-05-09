@@ -56,7 +56,7 @@ public static class TreatmentJsonModelMapper
                 name: model.Name,
                 datestart: model.StartDate,
                 cost: model.Cost,
-                dateDicharge: model.DateDischarge ?? DateTime.MinValue,
+                dateDicharge: model.DateDischarge,
                 departmentId: model.DepartmentId!.Value,
                 patientId: model.PatientId);
 

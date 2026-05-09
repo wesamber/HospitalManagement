@@ -14,5 +14,5 @@ public class CreateTreatmentInternalDto
     public Guid DepartmentId { get; set; }
     public decimal Cost { get; set; }
     public DateTime StartDate { get; set; }
-    public DateTime DateDischarge { get; set; }
+    public DateTime? DateDischarge { get; set; }
 }

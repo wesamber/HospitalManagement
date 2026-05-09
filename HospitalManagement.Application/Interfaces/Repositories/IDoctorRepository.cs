@@ -9,4 +9,5 @@ public interface IDoctorRepository : IRepository<Doctor>
     Task<IReadOnlyList<Doctor>> GetBySpecializationAsync(Specialization specialization);
     Task<IReadOnlyList<Doctor>> GetByDepartmentAsync(Guid departmentId);
     Task<bool> ExistAsync(string name, DateOnly dob);
+    Task UpdateSalaryHistoryAsync(Doctor doctor);
 }

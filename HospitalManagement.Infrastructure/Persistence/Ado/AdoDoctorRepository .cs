@@ -1,4 +1,5 @@
-﻿using HospitalManagement.Application.Interfaces.Repositories;
+﻿using HospitalManagement.Application.Interfaces.Persistence;
+using HospitalManagement.Application.Interfaces.Repositories;
 using HospitalManagement.Domain.Entities.Doctors;
 using HospitalManagement.Domain.Entities.Enums;
 using Microsoft.Data.SqlClient;
@@ -10,436 +11,406 @@ using System.Threading.Tasks;
 
 namespace HospitalManagement.Infrastructure.Persistence.Ado;
 
-public class AdoDoctorRepository : AdoBase, IDoctorRepository
+public class AdoDoctorRepository : AdoRepository<Doctor>, IDoctorRepository
 {
-    public AdoDoctorRepository(string connectionString)
-        : base(connectionString) { }
+    public AdoDoctorRepository(ISqlConnectionFactory connectionFactory)
+        : base(connectionFactory) { }
 
-    #region IRepository<Doctor>
+    #region CRUD METHODS
     public async Task<List<Doctor>> GetAllAsync()
     {
-        var doctors = new List<Doctor>();
+        await using var conn = await _connectionFactory.CreateOpenConnectionAsync();
 
-        using var connection = CreateConnection();
-        await connection.OpenAsync();
+        var cmd = CreateCommand(@"
+            SELECT Id, Name, DoctorNumber, Specialization,
+                   DateOfBirth, Address, PhoneNumber, Email
+            FROM Doctors", conn);
 
-        var command = new SqlCommand("SELECT * FROM Doctors", connection);
-        using var reader = await command.ExecuteReaderAsync();
+        var doctors = await QueryAsync(cmd, ReadDoctor);
 
-        while (await reader.ReadAsync())
-            doctors.Add(MapToDomain(reader));
-
-        // نحمل الـ Roles والـ Departments لكل دكتور
-        foreach (var doctor in doctors)
-        {
-            await LoadRolesAsync(doctor, connection);
-            await LoadDepartmentsAsync(doctor, connection);
-            await LoadTreatmentsAsync(doctor, connection);
-        }
+        foreach (var doctor in doctors) 
+            await LoadRelationsAsync(doctor , conn); 
 
         return doctors;
     }
 
     public async Task<Doctor?> GetByIdAsync(Guid id)
     {
-        using var connection = CreateConnection();
-        await connection.OpenAsync();
+        await using var conn = await _connectionFactory.CreateOpenConnectionAsync();
 
-        var command = new SqlCommand(
-            "SELECT * FROM Doctors WHERE Id = @Id", connection);
-        command.Parameters.AddWithValue("@Id", id);
+        var cmd = CreateCommand(@"
+            SELECT Id, Name, DoctorNumber, Specialization,
+                   DateOfBirth, Address, PhoneNumber, Email
+            FROM Doctors WHERE Id = @Id", conn);
+        AddGuidParam(cmd, "@Id", id);
 
-        using var reader = await command.ExecuteReaderAsync();
-
-        if (!await reader.ReadAsync())
+        var doctor = await QuerySingleAsync(cmd, ReadDoctor);
+        if(doctor is null)
             return null;
 
-        var doctor = MapToDomain(reader);
-        reader.Close();
-
-        await LoadRolesAsync(doctor, connection);
-        await LoadDepartmentsAsync(doctor, connection);
-        await LoadTreatmentsAsync(doctor, connection);
-
+        await LoadRelationsAsync(doctor, conn);
         return doctor;
     }
 
     public async Task AddAsync(Doctor doctor)
-    {
-        using var connection = CreateConnection();
-        await connection.OpenAsync();
-        using var transaction = connection.BeginTransaction();
-
-        try
+    { 
+        await ExecuteInTransactionAsync(async (conn , tx) =>
         {
-            // 1. أضف الدكتور
-            var cmd = new SqlCommand(@"
-                INSERT INTO Doctors 
-                (Id, Name, DoctorNumber, Specialization, DateOfBirth, Address, PhoneNumber, Email)
-                VALUES 
-                (@Id, @Name, @DoctorNumber, @Specialization, @DateOfBirth, @Address, @PhoneNumber, @Email)",
-                connection, transaction);
+            await InsertDoctorAsync(doctor, conn, tx);
 
-            MapToParameters(cmd, doctor);
-            await cmd.ExecuteNonQueryAsync();
+            foreach (var role in doctor.Roles)
+                await InsertRoleAsync(role, doctor.Id, conn, tx);
 
-            // 2. أضف الـ Roles
-            await SaveRolesAsync(doctor, connection, transaction);
+            foreach (var deptId in doctor.DepartmentsIds)
+                await InsertDepartmentDoctorAsync(deptId, doctor.Id, conn, tx);
 
-            // 3. أضف الـ Departments
-            await SaveDepartmentsAsync(doctor, connection, transaction);
-
-            // 4. أضف الـ Treatments
-            await SaveTreatmentsAsync(doctor, connection, transaction);
-
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+            foreach (var t in doctor.Treatments)
+                await InsertDoctorTreatmentAsync(t, conn, tx);
+        });
     }
 
     public async Task UpdateAsync(Doctor doctor)
     {
-        using var connection = CreateConnection();
-        await connection.OpenAsync();
-        using var transaction = connection.BeginTransaction();
-
-        try
+        await ExecuteInTransactionAsync(async (conn, tx) =>
         {
-            // 1. عدّل الدكتور
-            var cmd = new SqlCommand(@"
+            // 1. update doctor info
+            var cmd = CreateCommand(@"
                 UPDATE Doctors SET
-                    Name = @Name,
+                    Name           = @Name,
                     Specialization = @Specialization,
-                    DateOfBirth = @DateOfBirth,
-                    Address = @Address,
-                    PhoneNumber = @PhoneNumber,
-                    Email = @Email
-                WHERE Id = @Id",
-                connection, transaction);
-
-            MapToParameters(cmd, doctor);
+                    DateOfBirth    = @DateOfBirth,
+                    Address        = @Address,
+                    PhoneNumber    = @PhoneNumber,
+                    Email          = @Email
+                WHERE Id = @Id", conn, tx);
+            AddDoctorParams(cmd, doctor);
             await cmd.ExecuteNonQueryAsync();
 
-            // 2. امسح القديم وأضف الجديد
-            await DeleteRelatedAsync(doctor.Id, connection, transaction);
-            await SaveRolesAsync(doctor, connection, transaction);
-            await SaveDepartmentsAsync(doctor, connection, transaction);
-            await SaveTreatmentsAsync(doctor, connection, transaction);
+            // 2. delete and insert roles
+            /// 2.1 delete salary history
+            var deleteSalary = CreateCommand(@"
+                DELETE FROM SalaryHistory 
+                WHERE RoleId IN (SELECT Id FROM DoctorRoles WHERE DoctorId = @DoctorId)",
+                    conn, tx);
+            AddGuidParam(deleteSalary, "@DoctorId", doctor.Id);
+            await deleteSalary.ExecuteNonQueryAsync();
+            
+            /// 2.2 delete roles
+            var deleteRoles = CreateCommand(
+                "DELETE FROM DoctorRoles WHERE DoctorId = @DoctorId", conn, tx);
+            AddGuidParam(deleteRoles, "@DoctorId", doctor.Id);
+            await deleteRoles.ExecuteNonQueryAsync();
 
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+            /// 2.3 insert new roles
+            foreach (var role in doctor.Roles)
+                await InsertRoleAsync(role, doctor.Id, conn, tx);
+
+            // 3. delete and insert departments
+            var deleteDepts = CreateCommand(
+                "DELETE FROM DepartmentDoctors WHERE DoctorId = @DoctorId", conn, tx);
+            AddGuidParam(deleteDepts, "@DoctorId", doctor.Id);
+            await deleteDepts.ExecuteNonQueryAsync();
+
+            foreach (var deptId in doctor.DepartmentsIds)
+                await InsertDepartmentDoctorAsync(deptId, doctor.Id, conn, tx);
+
+            // 4. delete and insert treatments
+            var deleteTreatments = CreateCommand(
+                "DELETE FROM DoctorTreatments WHERE DoctorId = @DoctorId", conn, tx);
+            AddGuidParam(deleteTreatments, "@DoctorId", doctor.Id);
+            await deleteTreatments.ExecuteNonQueryAsync();
+
+            foreach (var t in doctor.Treatments)
+                await InsertDoctorTreatmentAsync(t, conn, tx);
+        });
     }
 
     public async Task DeleteAsync(Doctor doctor)
     {
-        using var connection = CreateConnection();
-        await connection.OpenAsync();
-        using var transaction = connection.BeginTransaction();
-
-        try
+        await ExecuteInTransactionAsync(async (conn , tx) =>
         {
-            await DeleteRelatedAsync(doctor.Id, connection, transaction);
-
-            var cmd = new SqlCommand(
-                "DELETE FROM Doctors WHERE Id = @Id",
-                connection, transaction);
-            cmd.Parameters.AddWithValue("@Id", doctor.Id);
+            var cmd = CreateCommand(
+                "DELETE FROM Doctors WHERE Id = @Id", conn, tx);
+            AddGuidParam(cmd, "@Id", doctor.Id);
             await cmd.ExecuteNonQueryAsync();
-
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+        });
     }
+
     #endregion
 
-    #region IDoctorRepository
+    #region IDoctorRepository METHODS
+    public async Task<bool> ExistAsync(string name , DateOnly dob)
+    {
+        await using var conn = await _connectionFactory.CreateOpenConnectionAsync();
+        var cmd = CreateCommand(@"
+            SELECT COUNT(1) FROM Doctors
+            WHERE Name = @Name AND DateOfBirth = @DateOfBirth", conn);
+        AddParam(cmd, "@Name", name);
+        AddParam(cmd, "@DateOfBirth", dob.ToDateTime(TimeOnly.MinValue));
+        return (int)(await cmd.ExecuteScalarAsync())! > 0;
+    }
+
     public async Task<Doctor?> GetByNumberAsync(string doctorNumber)
     {
-        using var connection = CreateConnection();
-        await connection.OpenAsync();
+        await using var conn = await _connectionFactory.CreateOpenConnectionAsync();
 
-        var cmd = new SqlCommand(
-            "SELECT * FROM Doctors WHERE DoctorNumber = @Number", connection);
-        cmd.Parameters.AddWithValue("@Number", doctorNumber);
+        var cmd = CreateCommand(@"
+            SELECT Id, Name, DoctorNumber, Specialization,
+                   DateOfBirth, Address, PhoneNumber, Email
+            FROM Doctors WHERE DoctorNumber = @DoctorNumber", conn);
+        AddParam(cmd, "@DoctorNumber", doctorNumber);
 
-        using var reader = await cmd.ExecuteReaderAsync();
-        if (!await reader.ReadAsync()) return null;
+        var doctor = await QuerySingleAsync(cmd, ReadDoctor);
+        if (doctor is null) 
+            return null;
 
-        var doctor = MapToDomain(reader);
-        reader.Close();
-
-        await LoadRolesAsync(doctor, connection);
-        await LoadDepartmentsAsync(doctor, connection);
-        await LoadTreatmentsAsync(doctor, connection);
-
+        await LoadRelationsAsync(doctor, conn);
         return doctor;
     }
 
     public async Task<IReadOnlyList<Doctor>> GetBySpecializationAsync(Specialization specialization)
     {
-        var doctors = new List<Doctor>();
+        await using var conn = await _connectionFactory.CreateOpenConnectionAsync();
 
-        using var connection = CreateConnection();
-        await connection.OpenAsync();
+        var cmd = CreateCommand(@"
+            SELECT Id, Name, DoctorNumber, Specialization,
+                   DateOfBirth, Address, PhoneNumber, Email
+            FROM Doctors WHERE Specialization = @Specialization", conn);
+        AddParam(cmd, "@Specialization", specialization.ToString());
 
-        var cmd = new SqlCommand(
-            "SELECT * FROM Doctors WHERE Specialization = @Spec", connection);
-        cmd.Parameters.AddWithValue("@Spec", specialization.ToString());
-
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-            doctors.Add(MapToDomain(reader));
-
-        reader.Close();
+        var doctors = await QueryAsync(cmd, ReadDoctor);
 
         foreach (var doctor in doctors)
-        {
-            await LoadRolesAsync(doctor, connection);
-            await LoadDepartmentsAsync(doctor, connection);
-            await LoadTreatmentsAsync(doctor, connection);
-        }
+            await LoadRelationsAsync(doctor, conn);
 
         return doctors;
     }
 
     public async Task<IReadOnlyList<Doctor>> GetByDepartmentAsync(Guid departmentId)
     {
-        var doctors = new List<Doctor>();
+        await using var conn = await _connectionFactory.CreateOpenConnectionAsync();
 
-        using var connection = CreateConnection();
-        await connection.OpenAsync();
+        var cmd = CreateCommand(@"
+            SELECT d.Id, d.Name, d.DoctorNumber, d.Specialization,
+                   d.DateOfBirth, d.Address, d.PhoneNumber, d.Email
+            FROM Doctors d
+            INNER JOIN DepartmentDoctors dd ON d.Id = dd.DoctorId
+            WHERE dd.DepartmentId = @DepartmentId", conn);
+        AddGuidParam(cmd, "@DepartmentId", departmentId);
 
-        var cmd = new SqlCommand(@"
-            SELECT d.* FROM Doctors d
-            INNER JOIN DoctorDepartments dd ON d.Id = dd.DoctorId
-            WHERE dd.DepartmentId = @DeptId", connection);
-        cmd.Parameters.AddWithValue("@DeptId", departmentId);
-
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-            doctors.Add(MapToDomain(reader));
-
-        reader.Close();
+        var doctors = await QueryAsync(cmd, ReadDoctor);
 
         foreach (var doctor in doctors)
-        {
-            await LoadRolesAsync(doctor, connection);
-            await LoadDepartmentsAsync(doctor, connection);
-            await LoadTreatmentsAsync(doctor, connection);
-        }
+            await LoadRelationsAsync(doctor, conn);
 
         return doctors;
     }
 
-    public async Task<bool> ExistAsync(string name, DateOnly dob)
+    // Background
+    public async Task UpdateSalaryHistoryAsync(Doctor doctor)
     {
-        using var connection = CreateConnection();
-        await connection.OpenAsync();
-
-        var cmd = new SqlCommand(
-            "SELECT COUNT(1) FROM Doctors WHERE Name = @Name AND DateOfBirth = @Dob",
-            connection);
-        cmd.Parameters.AddWithValue("@Name", name);
-        cmd.Parameters.AddWithValue("@Dob", dob.ToDateTime(TimeOnly.MinValue));
-
-        var count = (int)await cmd.ExecuteScalarAsync()!;
-        return count > 0;
-    }
-    #endregion
-
-    #region Private Helpers — Mapping
-    private static Doctor MapToDomain(SqlDataReader reader)
-    {
-        return new Doctor(
-            id: reader.GetGuid(reader.GetOrdinal("Id")),
-            name: reader.GetString(reader.GetOrdinal("Name")),
-            doctorNumber: reader.GetString(reader.GetOrdinal("DoctorNumber")),
-            specialization: Enum.Parse<Specialization>(
-                reader.GetString(reader.GetOrdinal("Specialization"))),
-            dob: DateOnly.FromDateTime(
-                reader.GetDateTime(reader.GetOrdinal("DateOfBirth"))),
-            address: reader.IsDBNull(reader.GetOrdinal("Address"))
-                ? null : reader.GetString(reader.GetOrdinal("Address")),
-            phoneNumber: reader.IsDBNull(reader.GetOrdinal("PhoneNumber"))
-                ? null : reader.GetString(reader.GetOrdinal("PhoneNumber")),
-            email: reader.IsDBNull(reader.GetOrdinal("Email"))
-                ? null : reader.GetString(reader.GetOrdinal("Email"))
-        );
-    }
-
-    private static void MapToParameters(SqlCommand cmd, Doctor doctor)
-    {
-        cmd.Parameters.AddWithValue("@Id", doctor.Id);
-        cmd.Parameters.AddWithValue("@Name", doctor.Name);
-        cmd.Parameters.AddWithValue("@DoctorNumber", doctor.DoctorNumber);
-        cmd.Parameters.AddWithValue("@Specialization", doctor.Specialization.ToString());
-        cmd.Parameters.AddWithValue("@DateOfBirth",
-            doctor.DateOfBirth.ToDateTime(TimeOnly.MinValue));
-        cmd.Parameters.AddWithValue("@Address", (object?)doctor.Address ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@PhoneNumber", (object?)doctor.PhoneNumber ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@Email", (object?)doctor.Email ?? DBNull.Value);
-    }
-    #endregion
-
-    #region Private Helpers — Load
-    private async Task LoadRolesAsync(Doctor doctor, SqlConnection connection)
-    {
-        var cmd = new SqlCommand(
-            "SELECT * FROM DoctorRoles WHERE DoctorId = @DoctorId ORDER BY StartDate",
-            connection);
-        cmd.Parameters.AddWithValue("@DoctorId", doctor.Id);
-
-        using var reader = await cmd.ExecuteReaderAsync();
-        var roles = new List<DoctorRole>();
-
-        while (await reader.ReadAsync())
+        await ExecuteInTransactionAsync(async (conn, tx) =>
         {
-            var roleType = reader.GetString(reader.GetOrdinal("RoleType"));
-            var id = reader.GetGuid(reader.GetOrdinal("Id"));
-            var startDate = reader.GetDateTime(reader.GetOrdinal("StartDate"));
-            var endDate = reader.IsDBNull(reader.GetOrdinal("EndDate"))
-                ? (DateTime?)null
-                : reader.GetDateTime(reader.GetOrdinal("EndDate"));
-            var isActive = reader.GetBoolean(reader.GetOrdinal("IsActive"));
-
-            DoctorRole role = roleType.ToLower() switch
+            foreach (var role in doctor.Roles)
             {
-                "permanent" => new PermanentRole(
-                    id, startDate, endDate, isActive,
-                    reader.GetDecimal(reader.GetOrdinal("BaseSalary"))),
+                using var deleteCmd = CreateCommand(
+                    "DELETE FROM SalaryHistory WHERE RoleId = @RoleId",
+                    conn, tx);
+                AddGuidParam(deleteCmd, "@RoleId", role.Id);
+                await deleteCmd.ExecuteNonQueryAsync();
 
-                "contracted" => new ContractedRole(
-                    id, startDate, endDate, isActive,
-                    reader.GetDecimal(reader.GetOrdinal("Percent"))),
+                foreach (var record in role.SalaryHistory)
+                {
+                    var salaryCmd = CreateCommand(@"
+                        INSERT INTO SalaryHistory (Id, RoleId, Year, Month, Amount)
+                        VALUES (NEWID(), @RoleId, @Year, @Month, @Amount)", conn, tx);
 
+                    AddGuidParam(salaryCmd, "@RoleId", role.Id);
+                    AddParam(salaryCmd, "@Year", record.Year);
+                    AddParam(salaryCmd, "@Month", record.Month);
+                    AddParam(salaryCmd, "@Amount", record.Amount);
+
+                    await salaryCmd.ExecuteNonQueryAsync();
+                }
+                
+            }
+        });
+    }
+
+    #endregion
+
+    #region PRIVATE METHODS - Read & Load
+    private static Doctor ReadDoctor(SqlDataReader r) => new Doctor(
+        id: GetGuid(r, "Id"),
+        name: GetString(r, "Name"),
+        doctorNumber: GetString(r, "DoctorNumber"),
+        specialization: GetEnum<Specialization>(r, "Specialization"),
+        dob: GetDateOnly(r, "DateOfBirth"),
+        address: GetNullableString(r, "Address"),
+        phoneNumber: GetNullableString(r, "PhoneNumber"),
+        email: GetNullableString(r, "Email")
+    );
+
+    private async Task LoadRelationsAsync(Doctor doctor, SqlConnection conn)
+    {
+        doctor.LoadRoles(await LoadRolesAsync(doctor.Id, conn));
+        doctor.LoadDepartmentIds(await LoadDepartmentIdsAsync(doctor.Id, conn));
+        doctor.LoadTreatments(await LoadTreatmentsAsync(doctor.Id, conn));
+    }
+
+    private async Task<List<DoctorRole>> LoadRolesAsync(Guid doctorId, SqlConnection conn)
+    {
+        var cmd = CreateCommand(@"
+            SELECT Id, RoleType, StartDate, EndDate, IsActive, BaseSalary, SalaryPercent
+            FROM DoctorRoles
+            WHERE DoctorId = @DoctorId
+            ORDER BY StartDate", conn);
+        AddGuidParam(cmd, "@DoctorId", doctorId);
+
+        var roles = await QueryAsync(cmd, r =>
+        {
+            var roleType = GetString(r, "RoleType").ToLower();
+            var id = GetGuid(r, "Id");
+            var startDate = GetDateTime(r, "StartDate");
+            var endDate = GetNullableDateTime(r, "EndDate");
+            var isActive = GetBool(r, "IsActive");
+
+            return roleType switch
+            {
+                "permanent" => (DoctorRole)new PermanentRole(
+                                    id, startDate, endDate, isActive,
+                                    GetNullableDecimal(r, "BaseSalary") ?? 0),
                 "trainee" => new TraineeRole(id, startDate, endDate, isActive),
-
+                "contracted" => new ContractedRole(
+                                    id, startDate, endDate, isActive,
+                                    GetNullableDecimal(r, "SalaryPercent") ?? 0.5m),
                 _ => throw new InvalidOperationException($"Unknown role: {roleType}")
             };
+        });
 
-            roles.Add(role);
-        }
-
-        doctor.LoadRoles(roles);
-    }
-
-    private async Task LoadDepartmentsAsync(Doctor doctor, SqlConnection connection)
-    {
-        var cmd = new SqlCommand(
-            "SELECT DepartmentId FROM DoctorDepartments WHERE DoctorId = @DoctorId",
-            connection);
-        cmd.Parameters.AddWithValue("@DoctorId", doctor.Id);
-
-        using var reader = await cmd.ExecuteReaderAsync();
-        var ids = new List<Guid>();
-
-        while (await reader.ReadAsync())
-            ids.Add(reader.GetGuid(0));
-
-        doctor.LoadDepartmentIds(ids);
-    }
-
-    private async Task LoadTreatmentsAsync(Doctor doctor, SqlConnection connection)
-    {
-        var cmd = new SqlCommand(
-            "SELECT * FROM DoctorTreatments WHERE DoctorId = @DoctorId",
-            connection);
-        cmd.Parameters.AddWithValue("@DoctorId", doctor.Id);
-
-        using var reader = await cmd.ExecuteReaderAsync();
-        var treatments = new List<DoctorTreatment>();
-
-        while (await reader.ReadAsync())
+        // حمّل SalaryHistory لكل role
+        foreach (var role in roles)
         {
-            treatments.Add(new DoctorTreatment(
-                doctorId: reader.GetGuid(reader.GetOrdinal("DoctorId")),
-                treatmentId: reader.GetGuid(reader.GetOrdinal("TreatmentId")),
-                role: Enum.Parse<TreatmentRole>(
-                    reader.GetString(reader.GetOrdinal("RoleInTreatment")))
-            ));
+            var salaryCmd = CreateCommand(@"
+                SELECT Year, Month, Amount
+                FROM SalaryHistory WHERE RoleId = @RoleId", conn);
+            AddGuidParam(salaryCmd, "@RoleId", role.Id);
+
+            var records = await QueryAsync(salaryCmd, r =>
+                new SalaryRecord(GetInt(r, "Year"), GetInt(r, "Month"), GetDecimal(r, "Amount")));
+
+            foreach (var record in records)
+                role.LoadSalaryRecord(record);
         }
 
-        doctor.LoadTreatments(treatments);
+        return roles;
+    }
+
+    private async Task<List<Guid>> LoadDepartmentIdsAsync(Guid doctorId, SqlConnection conn)
+    {
+        var cmd = CreateCommand(
+            "SELECT DepartmentId FROM DepartmentDoctors WHERE DoctorId = @DoctorId", conn);
+        AddGuidParam(cmd, "@DoctorId", doctorId);
+
+        return await QueryAsync(cmd, r => GetGuid(r, "DepartmentId"));
+    }
+
+    private async Task<List<DoctorTreatment>> LoadTreatmentsAsync(Guid doctorId, SqlConnection conn)
+    {
+        var cmd = CreateCommand(@"
+            SELECT DoctorId, TreatmentId, RoleInTreatment
+            FROM DoctorTreatments WHERE DoctorId = @DoctorId", conn);
+        AddGuidParam(cmd, "@DoctorId", doctorId);
+
+        return await QueryAsync(cmd, r => new DoctorTreatment(
+            GetGuid(r, "DoctorId"),
+            GetGuid(r, "TreatmentId"),
+            GetEnum<TreatmentRole>(r, "RoleInTreatment")));
     }
     #endregion
 
-    #region Private Helpers — Save & Delete
-    private async Task SaveRolesAsync(Doctor doctor, SqlConnection conn, SqlTransaction tx)
+    #region PRIVATE METHODS - Insert
+    private async Task InsertDoctorAsync(Doctor doctor, SqlConnection conn, SqlTransaction tx)
     {
-        foreach (var role in doctor.Roles)
+        var cmd = CreateCommand(@"
+            INSERT INTO Doctors
+                (Id, Name, DoctorNumber, Specialization, DateOfBirth, Address, PhoneNumber, Email)
+            VALUES
+                (@Id, @Name, @DoctorNumber, @Specialization, @DateOfBirth, @Address, @PhoneNumber, @Email)",
+            conn, tx);
+        AddDoctorParams(cmd, doctor);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    private async Task InsertRoleAsync(DoctorRole role, Guid doctorId, SqlConnection conn, SqlTransaction tx)
+    {
+        var cmd = CreateCommand(@"
+            INSERT INTO DoctorRoles
+                (Id, DoctorId, RoleType, StartDate, EndDate, IsActive, BaseSalary, SalaryPercent)
+            VALUES
+                (@Id, @DoctorId, @RoleType, @StartDate, @EndDate, @IsActive, @BaseSalary, @SalaryPercent)",
+            conn, tx);
+
+        AddGuidParam(cmd, "@Id", role.Id);
+        AddGuidParam(cmd, "@DoctorId", doctorId);
+        AddParam(cmd, "@RoleType", role.RoleName);
+        AddParam(cmd, "@StartDate", role.StartDate);
+        AddNullableDateParam(cmd, "@EndDate", role.EndDate);
+        AddParam(cmd, "@IsActive", role.IsActive);
+        AddParam(cmd, "@BaseSalary", role is PermanentRole p ? p.BaseSalary : null);
+        AddParam(cmd, "@SalaryPercent", role is ContractedRole c ? c.Percent : null);
+
+        await cmd.ExecuteNonQueryAsync();
+
+        // SalaryHistory
+        foreach (var record in role.SalaryHistory)
         {
-            var cmd = new SqlCommand(@"
-                INSERT INTO DoctorRoles 
-                (Id, DoctorId, RoleType, StartDate, EndDate, IsActive, BaseSalary, Percent)
-                VALUES 
-                (@Id, @DoctorId, @RoleType, @StartDate, @EndDate, @IsActive, @BaseSalary, @Percent)",
-                conn, tx);
+            var salaryCmd = CreateCommand(@"
+                INSERT INTO SalaryHistory (Id, RoleId, Year, Month, Amount)
+                VALUES (NEWID(), @RoleId, @Year, @Month, @Amount)", conn, tx);
 
-            cmd.Parameters.AddWithValue("@Id", role.Id);
-            cmd.Parameters.AddWithValue("@DoctorId", doctor.Id);
-            cmd.Parameters.AddWithValue("@RoleType", role.RoleName);
-            cmd.Parameters.AddWithValue("@StartDate", role.StartDate);
-            cmd.Parameters.AddWithValue("@EndDate", (object?)role.EndDate ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@IsActive", role.IsActive);
-            cmd.Parameters.AddWithValue("@BaseSalary",
-                role is PermanentRole pr ? pr.BaseSalary : DBNull.Value);
-            cmd.Parameters.AddWithValue("@Percent",
-                role is ContractedRole cr ? cr.Percent : DBNull.Value);
+            AddGuidParam(salaryCmd, "@RoleId", role.Id);
+            AddParam(salaryCmd, "@Year", record.Year);
+            AddParam(salaryCmd, "@Month", record.Month);
+            AddParam(salaryCmd, "@Amount", record.Amount);
 
-            await cmd.ExecuteNonQueryAsync();
+            await salaryCmd.ExecuteNonQueryAsync();
         }
     }
 
-    private async Task SaveDepartmentsAsync(Doctor doctor, SqlConnection conn, SqlTransaction tx)
+    private async Task InsertDepartmentDoctorAsync(Guid doctorId, Guid deptId, SqlConnection conn, SqlTransaction tx)
     {
-        foreach (var deptId in doctor.DepartmentsIds)
-        {
-            var cmd = new SqlCommand(
-                "INSERT INTO DoctorDepartments (DoctorId, DepartmentId) VALUES (@DId, @DeptId)",
-                conn, tx);
-            cmd.Parameters.AddWithValue("@DId", doctor.Id);
-            cmd.Parameters.AddWithValue("@DeptId", deptId);
-            await cmd.ExecuteNonQueryAsync();
-        }
+        var cmd = CreateCommand(@"
+            INSERT INTO DepartmentDoctors (DepartmentId, DoctorId)
+            VALUES (@DepartmentId, @DoctorId)", conn, tx);
+
+        AddGuidParam(cmd, "@DepartmentId", deptId);
+        AddGuidParam(cmd, "@DoctorId", doctorId);
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    private async Task SaveTreatmentsAsync(Doctor doctor, SqlConnection conn, SqlTransaction tx)
+    private async Task InsertDoctorTreatmentAsync(DoctorTreatment t, SqlConnection conn, SqlTransaction tx)
     {
-        foreach (var t in doctor.Treatments)
-        {
-            var cmd = new SqlCommand(@"
-                INSERT INTO DoctorTreatments (DoctorId, TreatmentId, RoleInTreatment)
-                VALUES (@DId, @TId, @Role)",
-                conn, tx);
-            cmd.Parameters.AddWithValue("@DId", t.DoctorId);
-            cmd.Parameters.AddWithValue("@TId", t.TreatmentId);
-            cmd.Parameters.AddWithValue("@Role", t.RoleInTreatment.ToString());
-            await cmd.ExecuteNonQueryAsync();
-        }
+        var cmd = CreateCommand(@"
+            INSERT INTO DoctorTreatments (DoctorId, TreatmentId, RoleInTreatment)
+            VALUES (@DoctorId, @TreatmentId, @RoleInTreatment)", conn, tx);
+
+        AddGuidParam(cmd, "@DoctorId", t.DoctorId);
+        AddGuidParam(cmd, "@TreatmentId", t.TreatmentId);
+        AddParam(cmd, "@RoleInTreatment", t.RoleInTreatment.ToString());
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    private async Task DeleteRelatedAsync(Guid doctorId, SqlConnection conn, SqlTransaction tx)
+    private static void AddDoctorParams(SqlCommand cmd, Doctor doctor)
     {
-        foreach (var table in new[] { "DoctorRoles", "DoctorDepartments", "DoctorTreatments" })
-        {
-            var cmd = new SqlCommand(
-                $"DELETE FROM {table} WHERE DoctorId = @Id", conn, tx);
-            cmd.Parameters.AddWithValue("@Id", doctorId);
-            await cmd.ExecuteNonQueryAsync();
-        }
+        AddGuidParam(cmd, "@Id", doctor.Id);
+        AddParam(cmd, "@Name", doctor.Name);
+        AddParam(cmd, "@DoctorNumber", doctor.DoctorNumber);
+        AddParam(cmd, "@Specialization", doctor.Specialization.ToString());
+        AddParam(cmd, "@DateOfBirth", doctor.DateOfBirth.ToDateTime(TimeOnly.MinValue));
+        AddParam(cmd, "@Address", doctor.Address);
+        AddParam(cmd, "@PhoneNumber", doctor.PhoneNumber);
+        AddParam(cmd, "@Email", doctor.Email);
     }
     #endregion
 }
