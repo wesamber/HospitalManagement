@@ -71,12 +71,12 @@ public static class ServiceCollectionExtensions
                 serializer: sp.GetRequiredService<ISerializer>()
                  ));
 
-            services.AddScoped<ISystemConfigService, SystemConfigService>();
         }
         else if(storageOption.ActiveProvider == "Database")
         {
             //هون الحقن الريبو تبعات الداتا بيز
             var connectionString = storageOption.ConnectionStrings.DefaultConnection;
+            services.AddScoped<ISystemConfigService, SystemConfigService>();
 
             services.AddScoped<ISqlConnectionFactory>(sp =>
                 new SqlConnectionFactory(connectionString));

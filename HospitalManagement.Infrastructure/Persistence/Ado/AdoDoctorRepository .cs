@@ -73,55 +73,43 @@ public class AdoDoctorRepository : AdoRepository<Doctor>, IDoctorRepository
     {
         await ExecuteInTransactionAsync(async (conn, tx) =>
         {
-            // 1. update doctor info
+            // 1. حدّث بيانات الدكتور
             var cmd = CreateCommand(@"
-                UPDATE Doctors SET
-                    Name           = @Name,
-                    Specialization = @Specialization,
-                    DateOfBirth    = @DateOfBirth,
-                    Address        = @Address,
-                    PhoneNumber    = @PhoneNumber,
-                    Email          = @Email
-                WHERE Id = @Id", conn, tx);
+            UPDATE Doctors SET
+                Name           = @Name,
+                Specialization = @Specialization,
+                DateOfBirth    = @DateOfBirth,
+                Address        = @Address,
+                PhoneNumber    = @PhoneNumber,
+                Email          = @Email
+            WHERE Id = @Id", conn, tx);
             AddDoctorParams(cmd, doctor);
             await cmd.ExecuteNonQueryAsync();
 
-            // 2. delete and insert roles
-            /// 2.1 delete salary history
+            // 2. حدّث الأدوار
             var deleteSalary = CreateCommand(@"
-                DELETE FROM SalaryHistory 
-                WHERE RoleId IN (SELECT Id FROM DoctorRoles WHERE DoctorId = @DoctorId)",
-                    conn, tx);
+            DELETE FROM SalaryHistory 
+            WHERE RoleId IN (SELECT Id FROM DoctorRoles WHERE DoctorId = @DoctorId)",
+                conn, tx);
             AddGuidParam(deleteSalary, "@DoctorId", doctor.Id);
             await deleteSalary.ExecuteNonQueryAsync();
-            
-            /// 2.2 delete roles
+
             var deleteRoles = CreateCommand(
                 "DELETE FROM DoctorRoles WHERE DoctorId = @DoctorId", conn, tx);
             AddGuidParam(deleteRoles, "@DoctorId", doctor.Id);
             await deleteRoles.ExecuteNonQueryAsync();
 
-            /// 2.3 insert new roles
             foreach (var role in doctor.Roles)
                 await InsertRoleAsync(role, doctor.Id, conn, tx);
 
-            // 3. delete and insert departments
-            var deleteDepts = CreateCommand(
-                "DELETE FROM DepartmentDoctors WHERE DoctorId = @DoctorId", conn, tx);
-            AddGuidParam(deleteDepts, "@DoctorId", doctor.Id);
-            await deleteDepts.ExecuteNonQueryAsync();
-
-            foreach (var deptId in doctor.DepartmentsIds)
-                await InsertDepartmentDoctorAsync(deptId, doctor.Id, conn, tx);
-
-            // 4. delete and insert treatments
+            // 3. حدّث المعالجات فقط
             var deleteTreatments = CreateCommand(
                 "DELETE FROM DoctorTreatments WHERE DoctorId = @DoctorId", conn, tx);
             AddGuidParam(deleteTreatments, "@DoctorId", doctor.Id);
             await deleteTreatments.ExecuteNonQueryAsync();
 
-            foreach (var t in doctor.Treatments)
-                await InsertDoctorTreatmentAsync(t, conn, tx);
+            foreach (var treatment in doctor.Treatments)
+                await InsertDoctorTreatmentAsync(treatment, conn, tx);
         });
     }
 
